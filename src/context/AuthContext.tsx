@@ -107,10 +107,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           } else if (errData.code === 'ACCOUNT_DISABLED') {
             handleSessionTerminated('Akun Anda telah dinonaktifkan oleh Owner.');
           } else {
-            localStorage.removeItem(TOKEN_STORAGE_KEY);
-            localStorage.removeItem(USER_STORAGE_KEY);
-            setToken(null);
-            setUser(null);
+            // General 401 (e.g. transient serverless restart or static deployment)
+            const savedUserRaw = localStorage.getItem(USER_STORAGE_KEY);
+            if (savedUserRaw) {
+              try {
+                setUser(JSON.parse(savedUserRaw));
+              } catch (e) {
+                localStorage.removeItem(TOKEN_STORAGE_KEY);
+                localStorage.removeItem(USER_STORAGE_KEY);
+                setToken(null);
+                setUser(null);
+              }
+            } else {
+              localStorage.removeItem(TOKEN_STORAGE_KEY);
+              localStorage.removeItem(USER_STORAGE_KEY);
+              setToken(null);
+              setUser(null);
+            }
           }
         }
         setIsLoading(false);
