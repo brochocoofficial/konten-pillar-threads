@@ -1,5 +1,43 @@
 export type PlatformType = 'threads' | 'x' | 'both';
 
+export type UserRole = 'owner' | 'user';
+export type AccountStatus = 'active' | 'disabled';
+
+export interface DeviceInfo {
+  device: string;
+  browser: string;
+  os: string;
+  ip?: string;
+}
+
+export interface User {
+  id: string;
+  username: string;
+  name: string;
+  email: string;
+  role: UserRole;
+  status: AccountStatus;
+  createdAt: string;
+  lastLoginAt: string | null;
+  lastActiveAt: string | null;
+  currentDeviceInfo: DeviceInfo | null;
+  currentSessionId?: string | null;
+  isOnline?: boolean;
+}
+
+export interface InviteLink {
+  id: string;
+  token: string;
+  createdBy: string;
+  createdByName?: string;
+  createdAt: string;
+  expiresAt: string;
+  maxUses: number; // e.g. 1, 5, 10 or 0 for unlimited
+  usedCount: number;
+  status: 'active' | 'expired' | 'exhausted';
+  usedByUsers: string[];
+}
+
 export interface TargetAudienceOption {
   id: string;
   platform: 'threads' | 'x';

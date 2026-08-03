@@ -5,11 +5,16 @@ import { FormInput } from './components/FormInput';
 import { ResultView } from './components/ResultView';
 import { SystemInstructionsModal } from './components/SystemInstructionsModal';
 import { HistoryModal } from './components/HistoryModal';
+import { LoginPage } from './components/LoginPage';
 import { GenerateFormInput, GenerationResult, HistoryItem } from './types';
 import { generateLocalContentPlan } from './data/generatorEngine';
 import { saveToHistory } from './utils/historyManager';
+import { useAuth } from './context/AuthContext';
+import { Zap } from 'lucide-react';
 
 export default function App() {
+  const { user, token, isLoading: isAuthLoading } = useAuth();
+
   const [currentScreen, setCurrentScreen] = useState<'form' | 'results'>('form');
   const [activeTab, setActiveTab] = useState<'generator' | 'history' | 'rules'>('generator');
   const [generationResult, setGenerationResult] = useState<GenerationResult | null>(null);
@@ -18,6 +23,27 @@ export default function App() {
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [lastInput, setLastInput] = useState<GenerateFormInput | null>(null);
 
+  // 1. Loading Screen while checking session
+  if (isAuthLoading) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-white space-y-4">
+        <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-600 to-rose-500 flex items-center justify-center animate-pulse shadow-lg shadow-rose-500/20">
+          <Zap className="w-7 h-7 text-white" />
+        </div>
+        <div className="text-center space-y-1">
+          <p className="text-sm font-extrabold tracking-wide">PILLARFLOW AI</p>
+          <p className="text-xs text-slate-400">Memvalidasi Sesi Login & Perangkat...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // 2. Unauthenticated -> Show Login & Invite Registration View
+  if (!user) {
+    return <LoginPage />;
+  }
+
+  // 3. Authenticated -> Render Main Application
   const handleGenerate = async (input: GenerateFormInput) => {
     setIsLoading(true);
     setLastInput(input);
@@ -26,7 +52,8 @@ export default function App() {
       const response = await fetch('/api/generate', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          Authorization: token ? `Bearer ${token}` : ''
         },
         body: JSON.stringify(input)
       });
@@ -86,7 +113,7 @@ export default function App() {
   const handleTabChange = (tab: 'generator' | 'history' | 'rules') => {
     setActiveTab(tab);
     if (tab === 'generator') {
-      // keep current screen or switch back
+      // Keep current screen
     } else if (tab === 'history') {
       setIsHistoryOpen(true);
     } else if (tab === 'rules') {
@@ -121,7 +148,9 @@ export default function App() {
       {/* Footer */}
       <footer className="border-t border-slate-200/80 dark:border-slate-800 py-6 text-center text-xs text-slate-500 dark:text-slate-400 bg-white/50 dark:bg-slate-900/50 mt-auto">
         <p className="font-extrabold text-slate-700 dark:text-slate-300">PILLARFLOW AI Content Generator</p>
-        <p className="mt-1 text-[11px] text-slate-400 dark:text-slate-500">Berbasis Formula 70-20-10 & Link Safety Threads + 4-1-1 Rule X (Twitter)</p>
+        <p className="mt-1 text-[11px] text-slate-400 dark:text-slate-500">
+          Akses Terproteksi RBAC & Single Device Session Enforcement
+        </p>
       </footer>
 
       {/* Mobile Bottom Navigation Bar */}
