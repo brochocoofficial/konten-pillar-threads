@@ -1,0 +1,6 @@
+{
+  "name": "PILLARFLOW",
+  "description": "PILLARFLOW — Content Planner, Hook Virality Generator, & Strategy berbasis Framework Algoritma & Audience Matrix.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
