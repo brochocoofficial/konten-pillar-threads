@@ -14,7 +14,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Data Directory & Database File Path
-const DATA_DIR = path.join(__dirname, 'data');
+const DATA_DIR = process.env.VERCEL ? '/tmp/data' : path.join(__dirname, 'data');
 const DB_FILE = path.join(DATA_DIR, 'auth-db.json');
 
 // Memory State & Interfaces
@@ -45,13 +45,17 @@ function hashPassword(password: string): string {
 function loadDatabase(): AuthDatabase {
   let loadedDb: AuthDatabase | null = null;
   try {
-    if (!fs.existsSync(DATA_DIR)) {
-      fs.mkdirSync(DATA_DIR, { recursive: true });
-    }
-
     if (fs.existsSync(DB_FILE)) {
       const data = fs.readFileSync(DB_FILE, 'utf-8');
       loadedDb = JSON.parse(data);
+    } else {
+      const fallbackPath = path.join(__dirname, 'data', 'auth-db.json');
+      const fallbackPathCwd = path.join(process.cwd(), 'data', 'auth-db.json');
+      if (fs.existsSync(fallbackPath)) {
+        loadedDb = JSON.parse(fs.readFileSync(fallbackPath, 'utf-8'));
+      } else if (fs.existsSync(fallbackPathCwd)) {
+        loadedDb = JSON.parse(fs.readFileSync(fallbackPathCwd, 'utf-8'));
+      }
     }
   } catch (err) {
     console.error('Error loading database file, reinitializing...', err);
@@ -99,7 +103,7 @@ function saveDatabase(db: AuthDatabase) {
     }
     fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2), 'utf-8');
   } catch (err) {
-    console.error('Failed to save database file:', err);
+    console.warn('Could not save database file (e.g. read-only filesystem):', err);
   }
 }
 
@@ -112,8 +116,9 @@ interface AuthenticatedRequest extends Request {
   sessionToken?: string;
 }
 
+export const app = express();
+
 async function startServer() {
-  const app = express();
   const PORT = 3000;
 
   app.use(express.json({ limit: '10mb' }));
@@ -848,14 +853,14 @@ Persyaratan Output:
   });
 
   // Vite middleware in dev mode
-  if (process.env.NODE_ENV !== 'production') {
+  if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
     const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: 'spa'
     });
     app.use(vite.middlewares);
-  } else {
+  } else if (!process.env.VERCEL) {
     const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath));
     app.get('*', (_req, res) => {
@@ -863,9 +868,13 @@ Persyaratan Output:
     });
   }
 
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server running on http://0.0.0.0:${PORT}`);
-  });
+  if (!process.env.VERCEL) {
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`Server running on http://0.0.0.0:${PORT}`);
+    });
+  }
 }
 
 startServer();
+
+export default app;
