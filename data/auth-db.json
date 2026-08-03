@@ -1,0 +1,61 @@
+{
+  "users": [
+    {
+      "id": "usr_owner_001",
+      "username": "owner",
+      "name": "Owner Admin",
+      "email": "owner@pillarflow.com",
+      "passwordHash": "ef797bf63966d8d94a945b39e77137ceea032fc86615db566ca223693b90602c",
+      "role": "owner",
+      "status": "active",
+      "createdAt": "2026-08-03T19:27:13.378Z",
+      "lastLoginAt": "2026-08-03T19:47:53.686Z",
+      "lastActiveAt": "2026-08-03T19:47:53.686Z",
+      "currentDeviceInfo": {
+        "device": "Perangkat Web",
+        "browser": "Browser",
+        "os": "OS"
+      },
+      "currentSessionId": "8abb1d3dbb5d5d26c5dfd49231b3961f3f0d0a7c133119720eda26b8f554cf8e"
+    }
+  ],
+  "sessions": [
+    {
+      "token": "8abb1d3dbb5d5d26c5dfd49231b3961f3f0d0a7c133119720eda26b8f554cf8e",
+      "userId": "usr_owner_001",
+      "createdAt": "2026-08-03T19:47:53.686Z",
+      "lastActiveAt": "2026-08-03T19:47:53.686Z",
+      "deviceInfo": {
+        "device": "Perangkat Web",
+        "browser": "Browser",
+        "os": "OS"
+      }
+    }
+  ],
+  "invites": [
+    {
+      "id": "inv_id_1785785739761",
+      "token": "inv_9ace674c19eb8868329f2b5a595fad1d",
+      "createdBy": "usr_owner_001",
+      "createdByName": "Owner Admin",
+      "createdAt": "2026-08-03T19:35:39.761Z",
+      "expiresAt": "never",
+      "maxUses": 1,
+      "usedCount": 0,
+      "status": "active",
+      "usedByUsers": []
+    },
+    {
+      "id": "inv_id_1785785443829",
+      "token": "inv_39ce59a2972f480f639f67227391f08f",
+      "createdBy": "usr_owner_001",
+      "createdByName": "Owner Admin",
+      "createdAt": "2026-08-03T19:30:43.829Z",
+      "expiresAt": "2026-08-10T19:30:43.829Z",
+      "maxUses": 1,
+      "usedCount": 0,
+      "status": "active",
+      "usedByUsers": []
+    }
+  ]
+}

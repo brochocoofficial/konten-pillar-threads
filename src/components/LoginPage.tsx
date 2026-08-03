@@ -94,12 +94,6 @@ export const LoginPage: React.FC = () => {
     }
   };
 
-  const fillOwnerCredentials = () => {
-    setUsername('owner');
-    setPassword('ownerpassword123');
-    setLoginError(null);
-  };
-
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 flex items-center justify-center p-4 relative overflow-hidden font-sans selection:bg-rose-500 selection:text-white">
       {/* Background Lighting & FX */}
@@ -221,28 +215,6 @@ export const LoginPage: React.FC = () => {
                   </>
                 )}
               </button>
-
-              {/* QUICK INITIAL OWNER HELPER BADGE */}
-              <div className="pt-2 border-t border-slate-700/60">
-                <div className="bg-slate-900/70 border border-slate-700/80 rounded-2xl p-3 flex items-center justify-between gap-2">
-                  <div className="space-y-0.5">
-                    <p className="text-[11px] font-extrabold text-slate-200 flex items-center gap-1">
-                      <Sparkles className="w-3 h-3 text-amber-400" />
-                      <span>Akun Owner bawaan:</span>
-                    </p>
-                    <p className="text-[10px] text-slate-400">
-                      User: <code className="text-rose-300">owner</code> | Pass: <code className="text-rose-300">ownerpassword123</code>
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={fillOwnerCredentials}
-                    className="px-2.5 py-1 bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 text-[10px] font-bold rounded-lg transition-colors cursor-pointer shrink-0"
-                  >
-                    Isi Otomatis
-                  </button>
-                </div>
-              </div>
             </form>
           )}
 

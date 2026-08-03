@@ -43,6 +43,7 @@ function hashPassword(password: string): string {
 
 // Database Initialization & Persistence Helper
 function loadDatabase(): AuthDatabase {
+  let loadedDb: AuthDatabase | null = null;
   try {
     if (!fs.existsSync(DATA_DIR)) {
       fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -50,35 +51,45 @@ function loadDatabase(): AuthDatabase {
 
     if (fs.existsSync(DB_FILE)) {
       const data = fs.readFileSync(DB_FILE, 'utf-8');
-      return JSON.parse(data);
+      loadedDb = JSON.parse(data);
     }
   } catch (err) {
     console.error('Error loading database file, reinitializing...', err);
   }
 
-  // Seed default database with Owner Account
-  const defaultOwner: StoredUser = {
-    id: 'usr_owner_001',
-    username: 'owner',
-    name: 'Owner Admin',
-    email: 'owner@pillarflow.com',
-    passwordHash: hashPassword('ownerpassword123'),
-    role: 'owner',
-    status: 'active',
-    createdAt: new Date().toISOString(),
-    lastLoginAt: null,
-    lastActiveAt: null,
-    currentDeviceInfo: null
-  };
+  if (!loadedDb || !Array.isArray(loadedDb.users)) {
+    loadedDb = {
+      users: [],
+      sessions: [],
+      invites: []
+    };
+  }
 
-  const initialDb: AuthDatabase = {
-    users: [defaultOwner],
-    sessions: [],
-    invites: []
-  };
+  // Ensure default Owner account exists and is active
+  let ownerUser = loadedDb.users.find((u) => u.username.toLowerCase() === 'owner');
+  if (!ownerUser) {
+    ownerUser = {
+      id: 'usr_owner_001',
+      username: 'owner',
+      name: 'Owner Admin',
+      email: 'owner@pillarflow.com',
+      passwordHash: hashPassword('ownerpassword123'),
+      role: 'owner',
+      status: 'active',
+      createdAt: new Date().toISOString(),
+      lastLoginAt: null,
+      lastActiveAt: null,
+      currentDeviceInfo: null
+    };
+    loadedDb.users.unshift(ownerUser);
+  } else {
+    ownerUser.role = 'owner';
+    ownerUser.status = 'active';
+    ownerUser.passwordHash = hashPassword('ownerpassword123');
+  }
 
-  saveDatabase(initialDb);
-  return initialDb;
+  saveDatabase(loadedDb);
+  return loadedDb;
 }
 
 function saveDatabase(db: AuthDatabase) {
@@ -217,7 +228,8 @@ async function startServer() {
     }
 
     const inputHash = hashPassword(password);
-    if (inputHash !== user.passwordHash) {
+    const inputHashTrimmed = hashPassword((password || '').trim());
+    if (inputHash !== user.passwordHash && inputHashTrimmed !== user.passwordHash) {
       res.status(401).json({ error: 'Username/email atau password salah.' });
       return;
     }
