@@ -88,7 +88,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         method: 'GET',
         headers: {
           Authorization: `Bearer ${activeToken}`
-        }
+        },
+        credentials: 'same-origin'
       });
 
       const contentType = res.headers.get('content-type') || '';
@@ -107,7 +108,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           } else if (errData.code === 'ACCOUNT_DISABLED') {
             handleSessionTerminated('Akun Anda telah dinonaktifkan oleh Owner.');
           } else {
-            // General 401 (e.g. transient serverless restart or static deployment)
+            // Transient 401 or serverless instance delay: fallback to saved local state
             const savedUserRaw = localStorage.getItem(USER_STORAGE_KEY);
             if (savedUserRaw) {
               try {
@@ -181,7 +182,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password, deviceInfo })
+        body: JSON.stringify({ username, password, deviceInfo }),
+        credentials: 'same-origin'
       });
 
       const contentType = res.headers.get('content-type') || '';
@@ -298,7 +300,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           email,
           password,
           deviceInfo
-        })
+        }),
+        credentials: 'same-origin'
       });
 
       const contentType = res.headers.get('content-type') || '';
@@ -375,7 +378,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       try {
         await fetch('/api/auth/logout', {
           method: 'POST',
-          headers: getAuthHeaders()
+          headers: getAuthHeaders(),
+          credentials: 'same-origin'
         });
       } catch (e) {
         console.warn('Logout request warning:', e);

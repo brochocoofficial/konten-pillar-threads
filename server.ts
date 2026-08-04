@@ -144,54 +144,91 @@ async function startServer() {
     };
   };
 
+// Helper to create timestamped session tokens
+function createSessionToken(userId: string): string {
+  const ts = Date.now();
+  const rand = crypto.randomBytes(16).toString('hex');
+  return `st.${userId}.${ts}.${rand}`;
+}
+
+// Helper to parse session tokens
+function parseSessionToken(token: string): { userId: string; timestamp: number } | null {
+  if (!token || typeof token !== 'string') return null;
+  if (token.startsWith('st.')) {
+    const parts = token.split('.');
+    if (parts.length >= 3) {
+      const userId = parts[1];
+      const timestamp = parseInt(parts[2], 10);
+      if (!isNaN(timestamp) && userId) {
+        return { userId, timestamp };
+      }
+      if (userId) {
+        return { userId, timestamp: 0 };
+      }
+    }
+  } else if (token.startsWith('vcl_owner')) {
+    return { userId: 'usr_owner_001', timestamp: 0 };
+  }
+  return null;
+}
+
+// Helper to set session cookie on response
+function setAuthCookie(res: Response, token: string) {
+  const isProd = process.env.NODE_ENV === 'production' || !!process.env.VERCEL;
+  const maxAgeSeconds = 30 * 24 * 60 * 60; // 30 days
+  const cookieHeader = `pillarflow_token=${encodeURIComponent(token)}; Path=/; HttpOnly; Max-Age=${maxAgeSeconds}; SameSite=Lax${isProd ? '; Secure' : ''}`;
+  res.setHeader('Set-Cookie', cookieHeader);
+}
+
+// Helper to clear session cookie on response
+function clearAuthCookie(res: Response) {
+  const isProd = process.env.NODE_ENV === 'production' || !!process.env.VERCEL;
+  const cookieHeader = `pillarflow_token=; Path=/; HttpOnly; Max-Age=0; Path=/; SameSite=Lax${isProd ? '; Secure' : ''}`;
+  res.setHeader('Set-Cookie', cookieHeader);
+}
+
+// Helper to extract session token from Authorization header or Cookie
+function extractToken(req: Request): string | null {
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    const bearerToken = authHeader.split(' ')[1].trim();
+    if (bearerToken && bearerToken !== 'null' && bearerToken !== 'undefined') {
+      return bearerToken;
+    }
+  }
+  const cookieHeader = req.headers.cookie;
+  if (cookieHeader) {
+    const match = cookieHeader.match(/(?:^|;\s*)pillarflow_token=([^;]*)/);
+    if (match && match[1]) {
+      const cookieToken = decodeURIComponent(match[1]).trim();
+      if (cookieToken && cookieToken !== 'null' && cookieToken !== 'undefined') {
+        return cookieToken;
+      }
+    }
+  }
+  return null;
+}
+
   // Middleware: Authentication & Single Device Session Validation
   const requireAuth = (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    const token = extractToken(req);
+    if (!token) {
       res.status(401).json({ error: 'Akses ditolak. Silakan login terlebih dahulu.' });
       return;
     }
 
-    const token = authHeader.split(' ')[1];
-    let session = db.sessions.find((s) => s.token === token);
+    const parsedToken = parseSessionToken(token);
+    let userId = parsedToken?.userId || null;
 
-    if (!session) {
-      let matchedUserId: string | null = null;
-      if (token.startsWith('st.')) {
-        const parts = token.split('.');
-        if (parts.length >= 3) {
-          matchedUserId = parts[1];
-        }
-      } else if (token.startsWith('vcl_owner')) {
-        matchedUserId = 'usr_owner_001';
-      }
-
-      if (matchedUserId) {
-        const existingUser = db.users.find(
-          (u) => u.id === matchedUserId || u.username.toLowerCase() === matchedUserId.toLowerCase()
-        );
-        if (existingUser) {
-          session = {
-            token,
-            userId: existingUser.id,
-            createdAt: new Date().toISOString(),
-            lastActiveAt: new Date().toISOString(),
-            deviceInfo: existingUser.currentDeviceInfo || { device: 'Perangkat Web', browser: 'Browser', os: 'OS' }
-          };
-          db.sessions.push(session);
-          if (!existingUser.currentSessionId) {
-            existingUser.currentSessionId = token;
-          }
-        }
-      }
-    }
-
-    if (!session) {
+    if (!userId) {
       res.status(401).json({ error: 'Sesi tidak valid atau telah berakhir. Silakan login kembali.' });
       return;
     }
 
-    const user = db.users.find((u) => u.id === session.userId);
+    const user = db.users.find(
+      (u) => u.id === userId || u.username.toLowerCase() === userId?.toLowerCase()
+    );
+
     if (!user) {
       res.status(401).json({ error: 'Pengguna tidak ditemukan.' });
       return;
@@ -206,19 +243,38 @@ async function startServer() {
       return;
     }
 
-    // Single Device Enforcement Check
+    // Single Device Enforcement Check using Timestamps:
+    // If user has a currentSessionId set, check if it represents a STRICTLY NEWER session
     if (user.currentSessionId && user.currentSessionId !== token) {
-      res.status(401).json({
-        code: 'SESSION_KICKED',
-        error: 'Akun Anda telah digunakan untuk login di perangkat lain. Demi keamanan, sesi pada perangkat ini telah berakhir.'
-      });
-      return;
+      const currentParsed = parseSessionToken(user.currentSessionId);
+      if (parsedToken && currentParsed && currentParsed.timestamp > parsedToken.timestamp) {
+        res.status(401).json({
+          code: 'SESSION_KICKED',
+          error: 'Akun Anda telah digunakan untuk login di perangkat lain. Demi keamanan, sesi pada perangkat ini telah berakhir.'
+        });
+        return;
+      }
     }
 
-    // Update last activity
+    // Update active session on user and in memory
+    user.currentSessionId = token;
     const nowIso = new Date().toISOString();
     user.lastActiveAt = nowIso;
-    session.lastActiveAt = nowIso;
+
+    let session = db.sessions.find((s) => s.token === token);
+    if (!session) {
+      session = {
+        token,
+        userId: user.id,
+        createdAt: nowIso,
+        lastActiveAt: nowIso,
+        deviceInfo: user.currentDeviceInfo || { device: 'Perangkat Web', browser: 'Browser', os: 'OS' }
+      };
+      db.sessions.push(session);
+    } else {
+      session.lastActiveAt = nowIso;
+    }
+
     saveDatabase(db);
 
     req.user = user;
@@ -271,8 +327,8 @@ async function startServer() {
     }
 
     // SINGLE DEVICE LOGIN ENFORCEMENT:
-    // Generate new session token & replace currentSessionId
-    const newToken = 'st.' + user.id + '.' + crypto.randomBytes(24).toString('hex');
+    // Generate new timestamped session token & replace currentSessionId
+    const newToken = createSessionToken(user.id);
     const nowIso = new Date().toISOString();
 
     user.currentSessionId = newToken;
@@ -293,6 +349,7 @@ async function startServer() {
     });
 
     saveDatabase(db);
+    setAuthCookie(res, newToken);
 
     res.json({
       token: newToken,
@@ -302,6 +359,9 @@ async function startServer() {
 
   // Get Current Session Profile
   app.get('/api/auth/me', requireAuth, (req: AuthenticatedRequest, res: Response) => {
+    if (req.sessionToken) {
+      setAuthCookie(res, req.sessionToken);
+    }
     res.json({
       user: sanitizeUser(req.user!)
     });
@@ -318,6 +378,7 @@ async function startServer() {
 
     db.sessions = db.sessions.filter((s) => s.token !== token);
     saveDatabase(db);
+    clearAuthCookie(res);
 
     res.json({ success: true, message: 'Berhasil logout.' });
   });
@@ -403,7 +464,7 @@ async function startServer() {
     // Create User
     const newUserId = 'usr_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
     const nowIso = new Date().toISOString();
-    const newToken = 'st.' + newUserId + '.' + crypto.randomBytes(24).toString('hex');
+    const newToken = createSessionToken(newUserId);
 
     const newUser: StoredUser = {
       id: newUserId,
@@ -435,10 +496,11 @@ async function startServer() {
       userId: newUserId,
       createdAt: nowIso,
       lastActiveAt: nowIso,
-      deviceInfo: newUser.currentDeviceInfo!
+      deviceInfo: newUser.currentDeviceInfo || { device: 'Perangkat Web', browser: 'Browser', os: 'OS' }
     });
 
     saveDatabase(db);
+    setAuthCookie(res, newToken);
 
     res.json({
       success: true,
