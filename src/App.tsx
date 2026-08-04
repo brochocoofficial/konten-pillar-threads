@@ -61,14 +61,14 @@ export default function App() {
       if (response.ok) {
         const data: GenerationResult = await response.json();
         setGenerationResult(data);
-        saveToHistory(input, data);
+        saveToHistory(input, data, user?.id);
         setCurrentScreen('results');
         window.scrollTo({ top: 0, behavior: 'smooth' });
       } else {
         console.warn('API response error, falling back to local engine...');
         const localData = generateLocalContentPlan(input);
         setGenerationResult(localData);
-        saveToHistory(input, localData);
+        saveToHistory(input, localData, user?.id);
         setCurrentScreen('results');
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }
@@ -76,7 +76,7 @@ export default function App() {
       console.error('Error contacting backend, using local fallback:', err);
       const localData = generateLocalContentPlan(input);
       setGenerationResult(localData);
-      saveToHistory(input, localData);
+      saveToHistory(input, localData, user?.id);
       setCurrentScreen('results');
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } finally {

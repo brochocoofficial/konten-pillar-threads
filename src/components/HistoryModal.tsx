@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { HistoryItem } from '../types';
 import { getHistoryList, deleteFromHistory, clearAllHistory } from '../utils/historyManager';
 import { generateContentPlanPDF } from '../utils/pdfGenerator';
+import { useAuth } from '../context/AuthContext';
 import { History, X, Download, Eye, Trash2, Search, Calendar, Layers } from 'lucide-react';
 
 interface HistoryModalProps {
@@ -15,28 +16,29 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({
   onClose,
   onSelectHistoryItem,
 }) => {
+  const { user } = useAuth();
   const [historyItems, setHistoryItems] = useState<HistoryItem[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     if (isOpen) {
-      setHistoryItems(getHistoryList());
+      setHistoryItems(getHistoryList(user?.id));
     }
-  }, [isOpen]);
+  }, [isOpen, user?.id]);
 
   if (!isOpen) return null;
 
   const handleDelete = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     if (confirm('Apakah Anda yakin ingin menghapus item riwayat ini?')) {
-      const updated = deleteFromHistory(id);
+      const updated = deleteFromHistory(id, user?.id);
       setHistoryItems(updated);
     }
   };
 
   const handleClearAll = () => {
-    if (confirm('Hapus seluruh riwayat simpanan? Tindakan ini tidak dapat dibatalkan.')) {
-      clearAllHistory();
+    if (confirm('Hapus seluruh riwayat simpanan Anda? Tindakan ini tidak dapat dibatalkan.')) {
+      clearAllHistory(user?.id);
       setHistoryItems([]);
     }
   };

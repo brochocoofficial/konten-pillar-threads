@@ -156,6 +156,7 @@ export interface GenerateFormInput {
 
 export interface HistoryItem {
   id: string;
+  userId?: string;
   createdAt: string;
   productName: string;
   category: string;

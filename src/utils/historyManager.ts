@@ -1,10 +1,15 @@
 import { HistoryItem, GenerateFormInput, GenerationResult } from '../types';
 
-const HISTORY_STORAGE_KEY = 'pillarflow_history_v1';
+const getStorageKey = (userId?: string) => {
+  if (!userId) return 'pillarflow_history_v1_guest';
+  return `pillarflow_history_v1_${userId}`;
+};
 
-export const getHistoryList = (): HistoryItem[] => {
+export const getHistoryList = (userId?: string): HistoryItem[] => {
   try {
-    const raw = localStorage.getItem(HISTORY_STORAGE_KEY);
+    const key = getStorageKey(userId);
+    let raw = localStorage.getItem(key);
+
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? parsed : [];
@@ -16,12 +21,14 @@ export const getHistoryList = (): HistoryItem[] => {
 
 export const saveToHistory = (
   input: GenerateFormInput,
-  result: GenerationResult
+  result: GenerationResult,
+  userId?: string
 ): HistoryItem => {
-  const existing = getHistoryList();
+  const existing = getHistoryList(userId);
   
   const newItem: HistoryItem = {
     id: `hist_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+    userId,
     createdAt: new Date().toLocaleDateString('id-ID', {
       day: 'numeric',
       month: 'short',
@@ -40,7 +47,8 @@ export const saveToHistory = (
   const updated = [newItem, ...existing.filter(item => item.id !== newItem.id)].slice(0, 30);
   
   try {
-    localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(updated));
+    const key = getStorageKey(userId);
+    localStorage.setItem(key, JSON.stringify(updated));
   } catch (err) {
     console.error('Failed to save item to history localStorage:', err);
   }
@@ -48,20 +56,22 @@ export const saveToHistory = (
   return newItem;
 };
 
-export const deleteFromHistory = (id: string): HistoryItem[] => {
-  const existing = getHistoryList();
+export const deleteFromHistory = (id: string, userId?: string): HistoryItem[] => {
+  const existing = getHistoryList(userId);
   const updated = existing.filter(item => item.id !== id);
   try {
-    localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(updated));
+    const key = getStorageKey(userId);
+    localStorage.setItem(key, JSON.stringify(updated));
   } catch (err) {
     console.error('Failed to delete item from history localStorage:', err);
   }
   return updated;
 };
 
-export const clearAllHistory = (): void => {
+export const clearAllHistory = (userId?: string): void => {
   try {
-    localStorage.removeItem(HISTORY_STORAGE_KEY);
+    const key = getStorageKey(userId);
+    localStorage.removeItem(key);
   } catch (err) {
     console.error('Failed to clear history localStorage:', err);
   }

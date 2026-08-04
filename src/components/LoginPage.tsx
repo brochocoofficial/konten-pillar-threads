@@ -14,7 +14,7 @@ export const LoginPage: React.FC = () => {
     e.preventDefault();
     setLoginError(null);
     if (!pin.trim()) {
-      setLoginError('Mohon masukkan PIN Owner.');
+      setLoginError('PIN yang Anda masukkan salah. Silakan coba lagi.');
       return;
     }
 
@@ -23,7 +23,7 @@ export const LoginPage: React.FC = () => {
     setIsSubmitting(false);
 
     if (!res.success) {
-      setLoginError(res.error || 'PIN Owner salah. Silakan coba lagi.');
+      setLoginError('PIN yang Anda masukkan salah. Silakan coba lagi.');
     }
   };
 
@@ -123,7 +123,7 @@ export const LoginPage: React.FC = () => {
               <div className="relative">
                 <input
                   type={showPin ? 'text' : 'password'}
-                  placeholder="Masukkan PIN Owner (contoh: ownerkonten123)"
+                  placeholder="Masukan PIN"
                   value={pin}
                   onChange={(e) => setPin(e.target.value)}
                   className="w-full pl-3.5 pr-10 py-2.5 text-xs bg-slate-950 border border-slate-800 rounded-xl focus:outline-none focus:border-rose-500 text-white placeholder-slate-500 transition-colors min-h-[44px]"
@@ -153,19 +153,6 @@ export const LoginPage: React.FC = () => {
               )}
             </button>
           </form>
-
-          {/* USER ACCESS NOTICE CARD */}
-          <div className="pt-3 border-t border-slate-800/80">
-            <div className="p-3.5 rounded-xl bg-slate-950/80 border border-slate-800 space-y-1.5">
-              <div className="flex items-center gap-1.5 text-xs font-bold text-amber-300">
-                <Link className="w-3.5 h-3.5 text-amber-400" />
-                <span>Akses Pengguna (User)</span>
-              </div>
-              <p className="text-[11px] text-slate-400 leading-relaxed">
-                Pengguna tidak memerlukan PIN. Masuk langsung melalui <strong className="text-slate-200">URL Akses Khusus</strong> yang dibuat oleh Owner (contoh: <code className="text-amber-300 font-mono text-[10px]">?access_key=AFFILIATE2026</code>).
-              </p>
-            </div>
-          </div>
 
         </div>
 

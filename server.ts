@@ -316,7 +316,7 @@ function extractToken(req: Request): string | null {
 
     const currentPin = db.ownerPin || 'ownerkonten123';
     if (pin.trim() !== currentPin) {
-      res.status(401).json({ error: 'PIN Owner salah. Silakan coba lagi.' });
+      res.status(401).json({ error: 'PIN yang Anda masukkan salah. Silakan coba lagi.' });
       return;
     }
 
