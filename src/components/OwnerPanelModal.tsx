@@ -13,9 +13,9 @@ interface OwnerPanelModalProps {
 }
 
 export const OwnerPanelModal: React.FC<OwnerPanelModalProps> = ({ isOpen, onClose }) => {
-  const { token, user: currentUser } = useAuth();
+  const { token, user: currentUser, getCopyableUserAccessLink } = useAuth();
 
-  const [activeTab, setActiveTab] = useState<'users' | 'invites' | 'security'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'access_key' | 'invites'>('users');
   
   // Data States
   const [users, setUsers] = useState<User[]>([]);
@@ -23,6 +23,14 @@ export const OwnerPanelModal: React.FC<OwnerPanelModalProps> = ({ isOpen, onClos
   const [isLoading, setIsLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'online' | 'active' | 'disabled'>('all');
+
+  // Access Key & Security States
+  const [accessKey, setAccessKey] = useState('AFFILIATE2026');
+  const [accessKeyStatus, setAccessKeyStatus] = useState<'active' | 'disabled'>('active');
+  const [ownerPin, setOwnerPin] = useState('ownerkonten123');
+  const [newAccessKeyInput, setNewAccessKeyInput] = useState('');
+  const [newOwnerPinInput, setNewOwnerPinInput] = useState('');
+  const [copyNotification, setCopyNotification] = useState<string | null>(null);
 
   // Modals & Forms
   const [isAddUserOpen, setIsAddUserOpen] = useState(false);
@@ -38,10 +46,6 @@ export const OwnerPanelModal: React.FC<OwnerPanelModalProps> = ({ isOpen, onClos
   const [maxUses, setMaxUses] = useState('1');
   const [createdInviteUrl, setCreatedInviteUrl] = useState<string | null>(null);
 
-  // Reset Password State
-  const [resetPassUserId, setResetPassUserId] = useState<string | null>(null);
-  const [resetPassValue, setResetPassValue] = useState('');
-
   // Copy Feedback
   const [copiedInviteId, setCopiedInviteId] = useState<string | null>(null);
 
@@ -54,9 +58,10 @@ export const OwnerPanelModal: React.FC<OwnerPanelModalProps> = ({ isOpen, onClos
     if (!isOpen || !token) return;
     setIsLoading(true);
     try {
-      const [resUsers, resInvites] = await Promise.all([
+      const [resUsers, resInvites, resKey] = await Promise.all([
         fetch('/api/owner/users', { headers: getHeaders() }),
-        fetch('/api/owner/invites', { headers: getHeaders() })
+        fetch('/api/owner/invites', { headers: getHeaders() }),
+        fetch('/api/owner/access-key', { headers: getHeaders() })
       ]);
 
       if (resUsers.ok) {
@@ -66,6 +71,12 @@ export const OwnerPanelModal: React.FC<OwnerPanelModalProps> = ({ isOpen, onClos
       if (resInvites.ok) {
         const iData = await resInvites.json();
         setInvites(iData);
+      }
+      if (resKey.ok) {
+        const kData = await resKey.json();
+        if (kData.accessKey) setAccessKey(kData.accessKey);
+        if (kData.status) setAccessKeyStatus(kData.status);
+        if (kData.ownerPin) setOwnerPin(kData.ownerPin);
       }
     } catch (err) {
       console.error('Failed to fetch owner data:', err);
@@ -79,6 +90,61 @@ export const OwnerPanelModal: React.FC<OwnerPanelModalProps> = ({ isOpen, onClos
       fetchData();
     }
   }, [isOpen]);
+
+  const handleCopyUserAccessLink = async () => {
+    const link = await getCopyableUserAccessLink();
+    try {
+      await navigator.clipboard.writeText(link);
+      setCopyNotification('Link akses User berhasil disalin');
+      setTimeout(() => setCopyNotification(null), 3500);
+    } catch (e) {
+      alert(`Link Akses User: ${link}`);
+    }
+  };
+
+  const handleSaveAccessKeyConfig = async () => {
+    try {
+      const res = await fetch('/api/owner/access-key', {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify({
+          newAccessKey: newAccessKeyInput ? newAccessKeyInput.trim() : undefined,
+          newPin: newOwnerPinInput ? newOwnerPinInput.trim() : undefined,
+          status: accessKeyStatus
+        })
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        if (data.accessKey) setAccessKey(data.accessKey);
+        if (data.ownerPin) setOwnerPin(data.ownerPin);
+        setNewAccessKeyInput('');
+        setNewOwnerPinInput('');
+        alert('Pengaturan Access Key & PIN Owner berhasil disimpan.');
+      } else {
+        alert(data.error || 'Gagal menyimpan pengaturan.');
+      }
+    } catch (e) {
+      alert('Gagal menghubungi server.');
+    }
+  };
+
+  const handleRotateAccessKey = async () => {
+    if (!confirm('Buat Access Key baru secara otomatis? Key lama tidak dapat digunakan lagi.')) return;
+    try {
+      const res = await fetch('/api/owner/rotate-access-key', {
+        method: 'POST',
+        headers: getHeaders()
+      });
+      const data = await res.json();
+      if (res.ok && data.accessKey) {
+        setAccessKey(data.accessKey);
+        alert(`Access Key baru berhasil dibuat: ${data.accessKey}`);
+      }
+    } catch (e) {
+      alert('Gagal melakukan rotate access key.');
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -182,32 +248,6 @@ export const OwnerPanelModal: React.FC<OwnerPanelModalProps> = ({ isOpen, onClos
     }
   };
 
-  const handleResetPasswordSubmit = async (userId: string) => {
-    if (!resetPassValue || resetPassValue.length < 6) {
-      alert('Password baru minimal 6 karakter.');
-      return;
-    }
-
-    try {
-      const res = await fetch(`/api/owner/users/${userId}/reset-password`, {
-        method: 'PUT',
-        headers: getHeaders(),
-        body: JSON.stringify({ newPassword: resetPassValue })
-      });
-
-      if (res.ok) {
-        alert('Password berhasil diperbarui.');
-        setResetPassUserId(null);
-        setResetPassValue('');
-      } else {
-        const err = await res.json();
-        alert(err.error || 'Gagal mereset password.');
-      }
-    } catch (e) {
-      alert('Terjadi kesalahan koneksi.');
-    }
-  };
-
   // INVITE LINK ACTIONS
   const handleGenerateInvite = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -277,8 +317,16 @@ export const OwnerPanelModal: React.FC<OwnerPanelModalProps> = ({ isOpen, onClos
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-slate-950/80 backdrop-blur-md overflow-y-auto font-sans">
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl max-w-5xl w-full max-h-[90vh] flex flex-col shadow-2xl text-slate-800 dark:text-slate-100 overflow-hidden">
         
+        {/* Toast Copy Notification */}
+        {copyNotification && (
+          <div className="bg-emerald-600 text-white px-4 py-2 text-xs font-bold rounded-xl shadow-lg flex items-center gap-2 animate-bounce mx-5 mt-3">
+            <Check className="w-4 h-4" />
+            <span>{copyNotification}</span>
+          </div>
+        )}
+
         {/* Header Bar */}
-        <div className="p-5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-900/90 sticky top-0 z-10">
+        <div className="p-5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-900/90 sticky top-0 z-10 flex-wrap gap-3">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-amber-500 to-rose-500 flex items-center justify-center text-white shadow-md shadow-rose-500/20">
               <Crown className="w-5 h-5 text-white" />
@@ -287,21 +335,32 @@ export const OwnerPanelModal: React.FC<OwnerPanelModalProps> = ({ isOpen, onClos
               <div className="flex items-center gap-2">
                 <h2 className="text-lg font-black text-slate-900 dark:text-white">Owner Admin Panel</h2>
                 <span className="px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider bg-rose-100 dark:bg-rose-950/80 text-rose-700 dark:text-rose-300 rounded-full border border-rose-200 dark:border-rose-800">
-                  Hak Akses Penuh
+                  Owner Mode
                 </span>
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Kelola Pengguna, Role, Link Undangan & Sesi Login Aktif
+                Kelola PIN Owner, Link Akses User, dan Pengguna Sistem
               </p>
             </div>
           </div>
 
-          <button
-            onClick={onClose}
-            className="p-2 rounded-xl text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleCopyUserAccessLink}
+              className="px-3.5 py-2 text-xs font-extrabold bg-gradient-to-r from-amber-500 via-rose-500 to-indigo-600 hover:from-amber-600 hover:to-indigo-500 text-white rounded-xl shadow-md flex items-center gap-1.5 transition-all cursor-pointer"
+              title="Salin Link Akses User ke Clipboard"
+            >
+              <Copy className="w-3.5 h-3.5" />
+              <span>Salin Link Akses User</span>
+            </button>
+
+            <button
+              onClick={onClose}
+              className="p-2 rounded-xl text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Tab Navigation */}
@@ -316,19 +375,19 @@ export const OwnerPanelModal: React.FC<OwnerPanelModalProps> = ({ isOpen, onClos
               }`}
             >
               <Users className="w-4 h-4" />
-              <span>Manajemen User ({users.length})</span>
+              <span>Daftar User ({users.length})</span>
             </button>
 
             <button
-              onClick={() => setActiveTab('invites')}
+              onClick={() => setActiveTab('access_key')}
               className={`px-4 py-2.5 text-xs font-extrabold rounded-t-xl transition-all flex items-center gap-2 border-b-2 cursor-pointer ${
-                activeTab === 'invites'
+                activeTab === 'access_key'
                   ? 'border-rose-500 text-rose-600 dark:text-rose-400 bg-white dark:bg-slate-900'
                   : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
               }`}
             >
-              <LinkIcon className="w-4 h-4" />
-              <span>Invite Links ({invites.length})</span>
+              <KeyRound className="w-4 h-4" />
+              <span>Access Key & PIN Owner</span>
             </button>
           </div>
 
@@ -573,7 +632,142 @@ export const OwnerPanelModal: React.FC<OwnerPanelModalProps> = ({ isOpen, onClos
             </div>
           )}
 
-          {/* TAB 2: INVITE LINKS MANAGEMENT */}
+          {/* TAB 2: ACCESS KEY & PIN OWNER MANAGEMENT */}
+          {activeTab === 'access_key' && (
+            <div className="space-y-6">
+              
+              {/* COPY USER ACCESS LINK MAIN CARD */}
+              <div className="p-5 rounded-2xl bg-gradient-to-r from-indigo-950 via-slate-900 to-rose-950 border border-indigo-500/30 text-white shadow-xl space-y-4">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-9 h-9 rounded-xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400">
+                      <Globe className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-extrabold text-white">Link Akses Pengguna (User)</h3>
+                      <p className="text-xs text-slate-300">Pengguna masuk secara otomatis tanpa perlu PIN atau registrasi password.</p>
+                    </div>
+                  </div>
+                  <span className="px-2.5 py-1 text-[10px] font-black uppercase rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                    Sistem Akses URL
+                  </span>
+                </div>
+
+                <div className="p-3 bg-slate-950/90 border border-slate-800 rounded-xl space-y-2">
+                  <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">URL Akses User Aktif</label>
+                  <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+                    <input
+                      type="text"
+                      readOnly
+                      value={`${window.location.origin}${window.location.pathname}?access_key=${accessKey}`}
+                      className="flex-1 px-3 py-2 text-xs font-mono bg-slate-900 border border-slate-700 rounded-lg text-amber-300 w-full"
+                    />
+                    <button
+                      onClick={handleCopyUserAccessLink}
+                      className="w-full sm:w-auto px-4 py-2 text-xs font-extrabold bg-gradient-to-r from-amber-500 to-rose-500 hover:from-amber-600 hover:to-rose-600 text-white rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-md shrink-0"
+                    >
+                      <Copy className="w-4 h-4" />
+                      <span>Salin Link Akses User</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* ACCESS KEY & PIN SETTINGS */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                
+                {/* 1. ACCESS KEY SETTINGS */}
+                <div className="p-5 bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-2xl space-y-4">
+                  <div className="flex items-center gap-2 pb-2 border-b border-slate-200 dark:border-slate-700">
+                    <KeyRound className="w-4 h-4 text-indigo-500" />
+                    <h4 className="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-slate-100">
+                      Pengaturan Access Key User
+                    </h4>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-slate-600 dark:text-slate-300">Access Key Saat Ini</label>
+                      <div className="flex items-center justify-between p-2.5 bg-slate-100 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700">
+                        <span className="font-mono text-xs font-extrabold text-indigo-600 dark:text-indigo-400">{accessKey}</span>
+                        <button
+                          onClick={handleRotateAccessKey}
+                          className="px-2.5 py-1 text-[11px] font-bold text-indigo-600 dark:text-indigo-400 hover:text-rose-500 bg-indigo-50 dark:bg-indigo-950/80 border border-indigo-200 dark:border-indigo-800 rounded-lg transition-colors flex items-center gap-1 cursor-pointer"
+                        >
+                          <RefreshCw className="w-3 h-3" />
+                          <span>Rotate Key</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-slate-600 dark:text-slate-300">Ubah Access Key kustom</label>
+                      <input
+                        type="text"
+                        placeholder="Contoh: AFFILIATE2026"
+                        value={newAccessKeyInput}
+                        onChange={(e) => setNewAccessKeyInput(e.target.value)}
+                        className="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl font-mono text-slate-800 dark:text-slate-100 focus:outline-none focus:border-indigo-500"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-slate-600 dark:text-slate-300">Status Akses User</label>
+                      <select
+                        value={accessKeyStatus}
+                        onChange={(e) => setAccessKeyStatus(e.target.value as 'active' | 'disabled')}
+                        className="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-100 font-bold focus:outline-none"
+                      >
+                        <option value="active">🟢 Aktif (User dapat masuk)</option>
+                        <option value="disabled">🔴 Dinonaktifkan (User tidak dapat masuk)</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2. OWNER PIN SETTINGS */}
+                <div className="p-5 bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-2xl space-y-4">
+                  <div className="flex items-center gap-2 pb-2 border-b border-slate-200 dark:border-slate-700">
+                    <ShieldCheck className="w-4 h-4 text-rose-500" />
+                    <h4 className="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-slate-100">
+                      Pengaturan PIN Owner
+                    </h4>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-slate-600 dark:text-slate-300">PIN Owner Saat Ini</label>
+                      <div className="p-2.5 bg-slate-100 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 font-mono text-xs font-extrabold text-rose-600 dark:text-rose-400">
+                        {ownerPin}
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-slate-600 dark:text-slate-300">Ganti PIN Owner Baru</label>
+                      <input
+                        type="text"
+                        placeholder="Ketik PIN Owner baru..."
+                        value={newOwnerPinInput}
+                        onChange={(e) => setNewOwnerPinInput(e.target.value)}
+                        className="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl font-mono text-slate-800 dark:text-slate-100 focus:outline-none focus:border-rose-500"
+                      />
+                    </div>
+
+                    <button
+                      onClick={handleSaveAccessKeyConfig}
+                      className="w-full py-2.5 px-4 bg-gradient-to-r from-indigo-600 to-rose-500 hover:from-indigo-500 hover:to-rose-400 text-white font-extrabold text-xs rounded-xl shadow-md transition-all cursor-pointer mt-2"
+                    >
+                      Simpan Perubahan Security & Access Key
+                    </button>
+                  </div>
+                </div>
+
+              </div>
+
+            </div>
+          )}
+
+          {/* TAB 3: INVITE LINKS MANAGEMENT */}
           {activeTab === 'invites' && (
             <div className="space-y-5">
               

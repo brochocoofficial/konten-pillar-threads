@@ -6,17 +6,15 @@ interface AuthContextType {
   user: User | null;
   token: string | null;
   isLoading: boolean;
+  accessKeyError: string | null;
   sessionKickedMessage: string | null;
+  loginWithPin: (pin: string) => Promise<{ success: boolean; error?: string }>;
   login: (username: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  verifyAccessKey: (accessKey: string) => Promise<{ success: boolean; error?: string }>;
+  getCopyableUserAccessLink: () => Promise<string>;
   logout: () => Promise<void>;
-  registerWithInvite: (
-    inviteToken: string,
-    username: string,
-    name: string,
-    email: string,
-    password: string
-  ) => Promise<{ success: boolean; error?: string }>;
   clearSessionKickedMessage: () => void;
+  clearAccessKeyError: () => void;
   refreshUser: () => Promise<void>;
 }
 
@@ -24,7 +22,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const TOKEN_STORAGE_KEY = 'pillarflow_auth_token_v1';
 const USER_STORAGE_KEY = 'pillarflow_auth_user_v1';
-const LOCAL_USERS_STORAGE_KEY = 'pillarflow_local_users_v1';
+const DEFAULT_ACCESS_KEY = 'AFFILIATE2026';
 
 const DEFAULT_OWNER_USER: User = {
   id: 'usr_owner_001',
@@ -55,6 +53,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   });
   const [isLoading, setIsLoading] = useState(true);
   const [sessionKickedMessage, setSessionKickedMessage] = useState<string | null>(null);
+  const [accessKeyError, setAccessKeyError] = useState<string | null>(null);
 
   // Helper for auth headers
   const getAuthHeaders = useCallback((customToken?: string) => {
@@ -74,7 +73,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setSessionKickedMessage(message);
   }, []);
 
-  // Check / Validate Session
+  // Check / Validate Session via Token
   const validateSession = useCallback(async (authToken?: string) => {
     const activeToken = authToken || token || localStorage.getItem(TOKEN_STORAGE_KEY);
     if (!activeToken) {
@@ -103,12 +102,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (errData.code === 'SESSION_KICKED') {
             handleSessionTerminated(
               errData.error ||
-                'Akun Anda telah digunakan untuk login di perangkat lain. Demi keamanan, sesi pada perangkat ini telah berakhir.'
+                'Akun Anda telah digunakan untuk login di perangkat lain. Sesi ini telah berakhir.'
             );
           } else if (errData.code === 'ACCOUNT_DISABLED') {
             handleSessionTerminated('Akun Anda telah dinonaktifkan oleh Owner.');
           } else {
-            // Transient 401 or serverless instance delay: fallback to saved local state
             const savedUserRaw = localStorage.getItem(USER_STORAGE_KEY);
             if (savedUserRaw) {
               try {
@@ -134,7 +132,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.warn('Session validation network error, falling back to local storage:', err);
     }
 
-    // Fallback if API returned non-JSON (static hosting on Vercel) or network error
     const savedUserRaw = localStorage.getItem(USER_STORAGE_KEY);
     if (savedUserRaw) {
       try {
@@ -151,46 +148,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(false);
   }, [token, handleSessionTerminated]);
 
-  // Initial check on mount
-  useEffect(() => {
-    validateSession();
-  }, [validateSession]);
-
-  // Periodic Heartbeat Check
-  useEffect(() => {
-    if (!token) return;
-
-    const interval = setInterval(() => {
-      validateSession();
-    }, 10000);
-
-    return () => clearInterval(interval);
-  }, [token, validateSession]);
-
-  // Login Handler
-  const login = async (usernameInput: string, passwordInput: string) => {
+  // VERIFY ACCESS KEY FROM URL OR LINK
+  const verifyAccessKey = useCallback(async (accessKey: string) => {
     setIsLoading(true);
+    setAccessKeyError(null);
     setSessionKickedMessage(null);
-
-    const username = (usernameInput || '').trim();
-    const password = (passwordInput || '').trim();
     const deviceInfo: DeviceInfo = getClientDeviceInfo();
 
-    let isApiFunctional = false;
-
     try {
-      const res = await fetch('/api/auth/login', {
+      const res = await fetch('/api/auth/verify-access-key', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password, deviceInfo }),
+        body: JSON.stringify({ accessKey, deviceInfo }),
         credentials: 'same-origin'
       });
 
       const contentType = res.headers.get('content-type') || '';
       if (contentType.includes('application/json')) {
-        isApiFunctional = true;
         const data = await res.json();
-
         if (res.ok && data.token) {
           localStorage.setItem(TOKEN_STORAGE_KEY, data.token);
           localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(data.user));
@@ -200,139 +175,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           return { success: true };
         } else {
           setIsLoading(false);
-          return { success: false, error: data.error || 'Login gagal.' };
-        }
-      }
-    } catch (err: any) {
-      console.warn('Backend API login unavailable, using client fallback:', err);
-    }
-
-    // Client-side fallback for Vercel Static deployment or offline mode
-    if (!isApiFunctional) {
-      const target = username.toLowerCase();
-
-      // Check Owner Credentials
-      if (
-        (target === 'owner' || target === 'owner@pillarflow.com') &&
-        (password === 'ownerpassword123' || password === 'owner')
-      ) {
-        const fallbackToken = 'vcl_owner_token_' + Date.now();
-        const updatedOwner: User = {
-          ...DEFAULT_OWNER_USER,
-          lastLoginAt: new Date().toISOString(),
-          currentDeviceInfo: deviceInfo
-        };
-        localStorage.setItem(TOKEN_STORAGE_KEY, fallbackToken);
-        localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(updatedOwner));
-        setToken(fallbackToken);
-        setUser(updatedOwner);
-        setIsLoading(false);
-        return { success: true };
-      }
-
-      // Check locally registered users
-      const localUsersRaw = localStorage.getItem(LOCAL_USERS_STORAGE_KEY);
-      if (localUsersRaw) {
-        try {
-          const localUsers: any[] = JSON.parse(localUsersRaw);
-          const match = localUsers.find(
-            (u) =>
-              (u.username.toLowerCase() === target || u.email.toLowerCase() === target) &&
-              u.password === password
-          );
-          if (match) {
-            const fallbackToken = 'vcl_user_token_' + Date.now();
-            const userObj: User = {
-              id: match.id,
-              username: match.username,
-              name: match.name,
-              email: match.email,
-              role: match.role || 'user',
-              status: match.status || 'active',
-              createdAt: match.createdAt || new Date().toISOString(),
-              lastLoginAt: new Date().toISOString(),
-              lastActiveAt: new Date().toISOString(),
-              currentDeviceInfo: deviceInfo,
-              isOnline: true
-            };
-            localStorage.setItem(TOKEN_STORAGE_KEY, fallbackToken);
-            localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(userObj));
-            setToken(fallbackToken);
-            setUser(userObj);
-            setIsLoading(false);
-            return { success: true };
-          }
-        } catch (e) {
-          console.error('Error reading local users:', e);
-        }
-      }
-
-      setIsLoading(false);
-      return { success: false, error: 'Username/email atau password salah.' };
-    }
-
-    setIsLoading(false);
-    return { success: false, error: 'Gagal terhubung ke server auth.' };
-  };
-
-  // Register via Invite Handler
-  const registerWithInvite = async (
-    inviteToken: string,
-    username: string,
-    name: string,
-    email: string,
-    password: string
-  ) => {
-    setIsLoading(true);
-    setSessionKickedMessage(null);
-    const deviceInfo: DeviceInfo = getClientDeviceInfo();
-
-    let isApiFunctional = false;
-
-    try {
-      const res = await fetch('/api/auth/register-with-invite', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          token: inviteToken,
-          username,
-          name,
-          email,
-          password,
-          deviceInfo
-        }),
-        credentials: 'same-origin'
-      });
-
-      const contentType = res.headers.get('content-type') || '';
-      if (contentType.includes('application/json')) {
-        isApiFunctional = true;
-        const data = await res.json();
-
-        if (res.ok && data.token) {
-          localStorage.setItem(TOKEN_STORAGE_KEY, data.token);
-          localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(data.user));
-          setToken(data.token);
-          setUser(data.user);
-          setIsLoading(false);
-          return { success: true };
-        } else {
-          setIsLoading(false);
-          return { success: false, error: data.error || 'Pendaftaran gagal.' };
+          const errText = data.error || 'Akses Tidak Valid: Link akses tidak berlaku atau telah diganti oleh Owner.';
+          setAccessKeyError(errText);
+          localStorage.removeItem(TOKEN_STORAGE_KEY);
+          localStorage.removeItem(USER_STORAGE_KEY);
+          setToken(null);
+          setUser(null);
+          return { success: false, error: errText };
         }
       }
     } catch (err) {
-      console.warn('Backend API registration unavailable, trying client fallback:', err);
+      console.warn('Backend access key verification API unavailable, trying client fallback:', err);
     }
 
-    // Client fallback registration for Vercel Static
-    if (!isApiFunctional) {
-      const newUserId = 'usr_loc_' + Date.now();
-      const newUserObj: User = {
-        id: newUserId,
-        username: username.trim(),
-        name: name.trim(),
-        email: email.trim(),
+    // Client-side fallback if server API fails (e.g. offline/static)
+    if (accessKey.trim().toUpperCase() === DEFAULT_ACCESS_KEY) {
+      const fallbackToken = 'vcl_user_token_' + Date.now();
+      const userObj: User = {
+        id: 'usr_user_' + Date.now(),
+        username: 'user_' + Date.now().toString(36),
+        name: 'Pengguna (User)',
+        email: 'user@pillarflow.app',
         role: 'user',
         status: 'active',
         createdAt: new Date().toISOString(),
@@ -341,35 +204,126 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         currentDeviceInfo: deviceInfo,
         isOnline: true
       };
-
-      const localUsersRaw = localStorage.getItem(LOCAL_USERS_STORAGE_KEY);
-      let localUsers: any[] = [];
-      if (localUsersRaw) {
-        try {
-          localUsers = JSON.parse(localUsersRaw);
-        } catch (e) {
-          localUsers = [];
-        }
-      }
-
-      localUsers.push({
-        ...newUserObj,
-        password: password.trim()
-      });
-
-      localStorage.setItem(LOCAL_USERS_STORAGE_KEY, JSON.stringify(localUsers));
-
-      const fallbackToken = 'vcl_user_token_' + Date.now();
       localStorage.setItem(TOKEN_STORAGE_KEY, fallbackToken);
-      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(newUserObj));
+      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(userObj));
       setToken(fallbackToken);
-      setUser(newUserObj);
+      setUser(userObj);
       setIsLoading(false);
       return { success: true };
     }
 
     setIsLoading(false);
-    return { success: false, error: 'Gagal menghubungi server pendaftaran.' };
+    const errText = 'Akses Tidak Valid: Link akses tidak berlaku, salah, atau telah dinonaktifkan oleh Owner.';
+    setAccessKeyError(errText);
+    return { success: false, error: errText };
+  }, []);
+
+  // Initial Check on Mount: Check for access_key in URL search params
+  useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    const urlAccessKey = searchParams.get('access_key');
+
+    if (urlAccessKey) {
+      verifyAccessKey(urlAccessKey).then(() => {
+        // Clean URL parameter without page reload
+        const newUrl = window.location.origin + window.location.pathname;
+        window.history.replaceState({}, document.title, newUrl);
+      });
+    } else {
+      validateSession();
+    }
+  }, [validateSession, verifyAccessKey]);
+
+  // Periodic Heartbeat Check
+  useEffect(() => {
+    if (!token) return;
+
+    const interval = setInterval(() => {
+      validateSession();
+    }, 15000);
+
+    return () => clearInterval(interval);
+  }, [token, validateSession]);
+
+  // OWNER LOGIN WITH PIN
+  const loginWithPin = async (pinInput: string) => {
+    setIsLoading(true);
+    setSessionKickedMessage(null);
+    setAccessKeyError(null);
+
+    const pin = (pinInput || '').trim();
+    const deviceInfo: DeviceInfo = getClientDeviceInfo();
+
+    try {
+      const res = await fetch('/api/auth/login-pin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pin, deviceInfo }),
+        credentials: 'same-origin'
+      });
+
+      const contentType = res.headers.get('content-type') || '';
+      if (contentType.includes('application/json')) {
+        const data = await res.json();
+        if (res.ok && data.token) {
+          localStorage.setItem(TOKEN_STORAGE_KEY, data.token);
+          localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(data.user));
+          setToken(data.token);
+          setUser(data.user);
+          setIsLoading(false);
+          return { success: true };
+        } else {
+          setIsLoading(false);
+          return { success: false, error: data.error || 'PIN Owner salah.' };
+        }
+      }
+    } catch (err: any) {
+      console.warn('Backend PIN login unavailable, using client fallback:', err);
+    }
+
+    // Client-side fallback for static/offline mode
+    if (pin === 'ownerkonten123' || pin === 'owner') {
+      const fallbackToken = 'vcl_owner_token_' + Date.now();
+      const updatedOwner: User = {
+        ...DEFAULT_OWNER_USER,
+        lastLoginAt: new Date().toISOString(),
+        currentDeviceInfo: deviceInfo
+      };
+      localStorage.setItem(TOKEN_STORAGE_KEY, fallbackToken);
+      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(updatedOwner));
+      setToken(fallbackToken);
+      setUser(updatedOwner);
+      setIsLoading(false);
+      return { success: true };
+    }
+
+    setIsLoading(false);
+    return { success: false, error: 'PIN Owner salah. Silakan periksa kembali PIN Anda.' };
+  };
+
+  // Legacy login function mapping to PIN login
+  const login = async (usernameInput: string, passwordInput: string) => {
+    return loginWithPin(passwordInput || usernameInput);
+  };
+
+  // GET COPYABLE ACCESS LINK FOR OWNER
+  const getCopyableUserAccessLink = async (): Promise<string> => {
+    let key = DEFAULT_ACCESS_KEY;
+    try {
+      const activeToken = token || localStorage.getItem(TOKEN_STORAGE_KEY);
+      const res = await fetch('/api/owner/access-key', {
+        headers: { Authorization: activeToken ? `Bearer ${activeToken}` : '' }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.accessKey) key = data.accessKey;
+      }
+    } catch (e) {
+      console.warn('Error fetching active access key:', e);
+    }
+
+    const baseUrl = window.location.origin + window.location.pathname;
+    return `${baseUrl}?access_key=${encodeURIComponent(key)}`;
   };
 
   // Logout Handler
@@ -395,6 +349,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setSessionKickedMessage(null);
   };
 
+  const clearAccessKeyError = () => {
+    setAccessKeyError(null);
+  };
+
   const refreshUser = async () => {
     await validateSession();
   };
@@ -405,11 +363,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         user,
         token,
         isLoading,
+        accessKeyError,
         sessionKickedMessage,
+        loginWithPin,
         login,
+        verifyAccessKey,
+        getCopyableUserAccessLink,
         logout,
-        registerWithInvite,
         clearSessionKickedMessage,
+        clearAccessKeyError,
         refreshUser
       }}
     >

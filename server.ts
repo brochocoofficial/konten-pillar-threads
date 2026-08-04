@@ -34,6 +34,9 @@ interface AuthDatabase {
   users: StoredUser[];
   sessions: StoredSession[];
   invites: InviteLink[];
+  ownerPin?: string;
+  activeAccessKey?: string;
+  accessKeyStatus?: 'active' | 'disabled';
 }
 
 // Password Hash Helper
@@ -65,9 +68,17 @@ function loadDatabase(): AuthDatabase {
     loadedDb = {
       users: [],
       sessions: [],
-      invites: []
+      invites: [],
+      ownerPin: 'ownerkonten123',
+      activeAccessKey: 'AFFILIATE2026',
+      accessKeyStatus: 'active'
     };
   }
+
+  // Ensure default Owner configuration exists
+  if (!loadedDb.ownerPin) loadedDb.ownerPin = 'ownerkonten123';
+  if (!loadedDb.activeAccessKey) loadedDb.activeAccessKey = 'AFFILIATE2026';
+  if (!loadedDb.accessKeyStatus) loadedDb.accessKeyStatus = 'active';
 
   // Ensure default Owner account exists and is active
   let ownerUser = loadedDb.users.find((u) => u.username.toLowerCase() === 'owner');
@@ -77,7 +88,7 @@ function loadDatabase(): AuthDatabase {
       username: 'owner',
       name: 'Owner Admin',
       email: 'owner@pillarflow.com',
-      passwordHash: hashPassword('ownerpassword123'),
+      passwordHash: hashPassword('ownerkonten123'),
       role: 'owner',
       status: 'active',
       createdAt: new Date().toISOString(),
@@ -89,7 +100,6 @@ function loadDatabase(): AuthDatabase {
   } else {
     ownerUser.role = 'owner';
     ownerUser.status = 'active';
-    ownerUser.passwordHash = hashPassword('ownerpassword123');
   }
 
   saveDatabase(loadedDb);
@@ -295,57 +305,56 @@ function extractToken(req: Request): string | null {
   // AUTHENTICATION ROUTES
   // ==========================================
 
-  // Login Endpoint
-  app.post('/api/auth/login', (req: Request, res: Response) => {
-    const { username, password, deviceInfo } = req.body;
+  // 1. OWNER PIN LOGIN ENDPOINT
+  app.post('/api/auth/login-pin', (req: Request, res: Response) => {
+    const { pin, deviceInfo } = req.body;
 
-    if (!username || !password) {
-      res.status(400).json({ error: 'Username/email dan password wajib diisi.' });
+    if (!pin) {
+      res.status(400).json({ error: 'PIN Owner wajib diisi.' });
       return;
     }
 
-    const target = username.trim().toLowerCase();
-    const user = db.users.find(
-      (u) => u.username.toLowerCase() === target || u.email.toLowerCase() === target
-    );
-
-    if (!user) {
-      res.status(401).json({ error: 'Username/email atau password salah.' });
+    const currentPin = db.ownerPin || 'ownerkonten123';
+    if (pin.trim() !== currentPin) {
+      res.status(401).json({ error: 'PIN Owner salah. Silakan coba lagi.' });
       return;
     }
 
-    if (user.status === 'disabled') {
-      res.status(403).json({ error: 'Akun Anda telah dinonaktifkan oleh Owner.' });
-      return;
+    let ownerUser = db.users.find((u) => u.username === 'owner' || u.role === 'owner');
+    if (!ownerUser) {
+      ownerUser = {
+        id: 'usr_owner_001',
+        username: 'owner',
+        name: 'Owner Admin',
+        email: 'owner@pillarflow.com',
+        passwordHash: hashPassword(currentPin),
+        role: 'owner',
+        status: 'active',
+        createdAt: new Date().toISOString(),
+        lastLoginAt: null,
+        lastActiveAt: null,
+        currentDeviceInfo: null
+      };
+      db.users.unshift(ownerUser);
     }
 
-    const inputHash = hashPassword(password);
-    const inputHashTrimmed = hashPassword((password || '').trim());
-    if (inputHash !== user.passwordHash && inputHashTrimmed !== user.passwordHash) {
-      res.status(401).json({ error: 'Username/email atau password salah.' });
-      return;
-    }
-
-    // SINGLE DEVICE LOGIN ENFORCEMENT:
-    // Generate new timestamped session token & replace currentSessionId
-    const newToken = createSessionToken(user.id);
+    const newToken = createSessionToken(ownerUser.id);
     const nowIso = new Date().toISOString();
 
-    user.currentSessionId = newToken;
-    user.lastLoginAt = nowIso;
-    user.lastActiveAt = nowIso;
-    user.currentDeviceInfo = deviceInfo || { device: 'Perangkat Web', browser: 'Browser', os: 'OS' };
+    ownerUser.currentSessionId = newToken;
+    ownerUser.lastLoginAt = nowIso;
+    ownerUser.lastActiveAt = nowIso;
+    ownerUser.currentDeviceInfo = deviceInfo || { device: 'Perangkat Web', browser: 'Browser', os: 'OS' };
 
-    // Remove old sessions for this user from sessions list
-    db.sessions = db.sessions.filter((s) => s.userId !== user.id);
+    // Remove old sessions for owner
+    db.sessions = db.sessions.filter((s) => s.userId !== ownerUser!.id);
 
-    // Add new session
     db.sessions.push({
       token: newToken,
-      userId: user.id,
+      userId: ownerUser.id,
       createdAt: nowIso,
       lastActiveAt: nowIso,
-      deviceInfo: user.currentDeviceInfo
+      deviceInfo: ownerUser.currentDeviceInfo
     });
 
     saveDatabase(db);
@@ -353,8 +362,133 @@ function extractToken(req: Request): string | null {
 
     res.json({
       token: newToken,
-      user: sanitizeUser(user)
+      user: sanitizeUser(ownerUser)
     });
+  });
+
+  // 2. USER ACCESS KEY VERIFICATION ENDPOINT
+  app.post('/api/auth/verify-access-key', (req: Request, res: Response) => {
+    const { accessKey, deviceInfo } = req.body;
+
+    if (!accessKey) {
+      res.status(400).json({ code: 'INVALID_ACCESS_KEY', error: 'Key Akses tidak ditemukan dalam URL.' });
+      return;
+    }
+
+    const activeKey = db.activeAccessKey || 'AFFILIATE2026';
+    const status = db.accessKeyStatus || 'active';
+
+    if (status !== 'active') {
+      res.status(401).json({
+        code: 'ACCESS_KEY_DISABLED',
+        error: 'Akses Tidak Valid: Link akses User sedang dinonaktifkan oleh Owner.'
+      });
+      return;
+    }
+
+    if (accessKey.trim().toUpperCase() !== activeKey.trim().toUpperCase()) {
+      res.status(401).json({
+        code: 'INVALID_ACCESS_KEY',
+        error: 'Akses Tidak Valid: Link akses tidak berlaku atau telah diganti oleh Owner.'
+      });
+      return;
+    }
+
+    // Create or retrieve a User session object
+    const newUserId = 'usr_user_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
+    const nowIso = new Date().toISOString();
+    const newToken = createSessionToken(newUserId);
+
+    const newUser: StoredUser = {
+      id: newUserId,
+      username: 'user_' + Date.now().toString(36),
+      name: 'Pengguna (User)',
+      email: 'user@pillarflow.app',
+      passwordHash: '',
+      role: 'user',
+      status: 'active',
+      createdAt: nowIso,
+      lastLoginAt: nowIso,
+      lastActiveAt: nowIso,
+      currentDeviceInfo: deviceInfo || { device: 'Perangkat Web', browser: 'Browser', os: 'OS' },
+      currentSessionId: newToken
+    };
+
+    db.users.push(newUser);
+
+    db.sessions.push({
+      token: newToken,
+      userId: newUserId,
+      createdAt: nowIso,
+      lastActiveAt: nowIso,
+      deviceInfo: newUser.currentDeviceInfo!
+    });
+
+    saveDatabase(db);
+    setAuthCookie(res, newToken);
+
+    res.json({
+      token: newToken,
+      user: sanitizeUser(newUser),
+      accessKey: activeKey
+    });
+  });
+
+  // Backward-compatible Login Endpoint
+  app.post('/api/auth/login', (req: Request, res: Response) => {
+    const { username, password, pin, deviceInfo } = req.body;
+
+    if (pin || username === 'owner') {
+      const pinValue = pin || password;
+      const currentPin = db.ownerPin || 'ownerkonten123';
+      if (pinValue && pinValue.trim() === currentPin) {
+        let ownerUser = db.users.find((u) => u.username === 'owner' || u.role === 'owner');
+        if (!ownerUser) {
+          ownerUser = {
+            id: 'usr_owner_001',
+            username: 'owner',
+            name: 'Owner Admin',
+            email: 'owner@pillarflow.com',
+            passwordHash: hashPassword(currentPin),
+            role: 'owner',
+            status: 'active',
+            createdAt: new Date().toISOString(),
+            lastLoginAt: null,
+            lastActiveAt: null,
+            currentDeviceInfo: null
+          };
+          db.users.unshift(ownerUser);
+        }
+
+        const newToken = createSessionToken(ownerUser.id);
+        const nowIso = new Date().toISOString();
+
+        ownerUser.currentSessionId = newToken;
+        ownerUser.lastLoginAt = nowIso;
+        ownerUser.lastActiveAt = nowIso;
+        ownerUser.currentDeviceInfo = deviceInfo || { device: 'Perangkat Web', browser: 'Browser', os: 'OS' };
+
+        db.sessions = db.sessions.filter((s) => s.userId !== ownerUser!.id);
+        db.sessions.push({
+          token: newToken,
+          userId: ownerUser.id,
+          createdAt: nowIso,
+          lastActiveAt: nowIso,
+          deviceInfo: ownerUser.currentDeviceInfo
+        });
+
+        saveDatabase(db);
+        setAuthCookie(res, newToken);
+
+        res.json({
+          token: newToken,
+          user: sanitizeUser(ownerUser)
+        });
+        return;
+      }
+    }
+
+    res.status(401).json({ error: 'PIN Owner atau data login tidak sesuai.' });
   });
 
   // Get Current Session Profile
@@ -538,6 +672,57 @@ function extractToken(req: Request): string | null {
   // ==========================================
   // OWNER PANEL ROUTES (Role-Based Access)
   // ==========================================
+
+  // Get Owner Access Key & PIN Config (Owner Only)
+  app.get('/api/owner/access-key', requireAuth, requireOwner, (req: AuthenticatedRequest, res: Response) => {
+    res.json({
+      accessKey: db.activeAccessKey || 'AFFILIATE2026',
+      status: db.accessKeyStatus || 'active',
+      ownerPin: db.ownerPin || 'ownerkonten123'
+    });
+  });
+
+  // Update Access Key or Owner PIN (Owner Only)
+  app.post('/api/owner/access-key', requireAuth, requireOwner, (req: AuthenticatedRequest, res: Response) => {
+    const { newAccessKey, status, newPin } = req.body;
+
+    if (newAccessKey && typeof newAccessKey === 'string' && newAccessKey.trim()) {
+      db.activeAccessKey = newAccessKey.trim().toUpperCase();
+    }
+    if (status === 'active' || status === 'disabled') {
+      db.accessKeyStatus = status;
+    }
+    if (newPin && typeof newPin === 'string' && newPin.trim()) {
+      db.ownerPin = newPin.trim();
+    }
+
+    saveDatabase(db);
+
+    res.json({
+      success: true,
+      message: 'Pengaturan Access Key & Security diperbarui.',
+      accessKey: db.activeAccessKey,
+      status: db.accessKeyStatus,
+      ownerPin: db.ownerPin
+    });
+  });
+
+  // Rotate Access Key Automatically (Owner Only)
+  app.post('/api/owner/rotate-access-key', requireAuth, requireOwner, (req: AuthenticatedRequest, res: Response) => {
+    const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+    const newKey = `AFFILIATE${randomSuffix}`;
+
+    db.activeAccessKey = newKey;
+    db.accessKeyStatus = 'active';
+
+    saveDatabase(db);
+
+    res.json({
+      success: true,
+      message: 'Access Key baru berhasil dibuat.',
+      accessKey: newKey
+    });
+  });
 
   // Get All Users (Owner Only)
   app.get('/api/owner/users', requireAuth, requireOwner, (req: AuthenticatedRequest, res: Response) => {
