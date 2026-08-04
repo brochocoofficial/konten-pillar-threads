@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Sparkles, BookOpen, History, Sun, Moon, Zap, Crown, LogOut, ShieldCheck, User as UserIcon, Menu, X, ChevronDown } from 'lucide-react';
+import { Sparkles, BookOpen, History, Sun, Moon, Zap, Crown, LogOut, ShieldCheck, User as UserIcon, Menu, X, ChevronDown, Link as LinkIcon, Check, Copy } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { OwnerPanelModal } from './OwnerPanelModal';
@@ -18,13 +18,33 @@ export const Header: React.FC<HeaderProps> = ({
   currentScreen
 }) => {
   const { theme, toggleTheme } = useTheme();
-  const { user, logout } = useAuth();
+  const { user, logout, getCopyableUserAccessLink } = useAuth();
 
   const [isOwnerPanelOpen, setIsOwnerPanelOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [copyNotification, setCopyNotification] = useState<string | null>(null);
+
+  const handleCopyUserAccessLink = async () => {
+    try {
+      const link = await getCopyableUserAccessLink();
+      await navigator.clipboard.writeText(link);
+      setCopyNotification('Link Akses User terenkripsi berhasil disalin!');
+      setTimeout(() => setCopyNotification(null), 3500);
+    } catch (e) {
+      const link = await getCopyableUserAccessLink();
+      alert(`Link Akses User:\n${link}`);
+    }
+  };
 
   return (
     <>
+      {copyNotification && (
+        <div className="fixed top-3 right-3 sm:top-5 sm:right-5 z-50 bg-slate-900 text-white border border-emerald-500/50 px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-2.5 animate-bounce-short">
+          <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+          <span className="text-xs font-extrabold text-emerald-200">{copyNotification}</span>
+        </div>
+      )}
+
       <header className="sticky top-0 z-40 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800 text-slate-800 dark:text-slate-100 shadow-xs transition-colors duration-200">
         <div className="max-w-7xl mx-auto px-3 sm:px-6 h-16 flex items-center justify-between gap-2">
           
@@ -75,16 +95,27 @@ export const Header: React.FC<HeaderProps> = ({
               </div>
             )}
 
-            {/* Owner Panel Button (Only for Owner role) */}
+            {/* Owner Actions (Only for Owner role) */}
             {user?.role === 'owner' && (
-              <button
-                onClick={() => setIsOwnerPanelOpen(true)}
-                className="flex items-center gap-1.5 px-3 py-2 text-xs font-black text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/70 hover:bg-rose-100 dark:hover:bg-rose-900 border border-rose-200 dark:border-rose-800 rounded-xl transition-all cursor-pointer shadow-xs"
-                title="Buka Panel Owner Administration"
-              >
-                <Crown className="w-4 h-4 text-amber-500" />
-                <span>Owner Panel</span>
-              </button>
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={handleCopyUserAccessLink}
+                  className="flex items-center gap-1.5 px-3 py-2 text-xs font-black text-white bg-gradient-to-r from-amber-500 via-rose-500 to-indigo-600 hover:from-amber-600 hover:to-indigo-500 rounded-xl transition-all cursor-pointer shadow-md"
+                  title="Salin Link Akses Khusus User (dengan Access Key Terenkripsi)"
+                >
+                  <LinkIcon className="w-3.5 h-3.5 text-white" />
+                  <span>{copyNotification ? 'Link Disalin!' : 'Salin Link Akses User'}</span>
+                </button>
+
+                <button
+                  onClick={() => setIsOwnerPanelOpen(true)}
+                  className="flex items-center gap-1.5 px-2.5 py-2 text-xs font-black text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/70 hover:bg-rose-100 dark:hover:bg-rose-900 border border-rose-200 dark:border-rose-800 rounded-xl transition-all cursor-pointer"
+                  title="Buka Panel Owner Administration"
+                >
+                  <Crown className="w-4 h-4 text-amber-500" />
+                  <span className="hidden sm:inline">Owner Panel</span>
+                </button>
+              </div>
             )}
 
             {/* Theme Toggle Button */}
@@ -206,13 +237,23 @@ export const Header: React.FC<HeaderProps> = ({
             {/* Quick Action Links */}
             <div className="grid grid-cols-2 gap-2 text-xs font-bold">
               {user?.role === 'owner' && (
-                <button
-                  onClick={() => { setIsOwnerPanelOpen(true); setIsMobileMenuOpen(false); }}
-                  className="col-span-2 flex items-center justify-center gap-2 p-2.5 bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 rounded-xl cursor-pointer font-black"
-                >
-                  <Crown className="w-4 h-4 text-amber-500" />
-                  <span>Buka Owner Admin Panel</span>
-                </button>
+                <div className="col-span-2 space-y-2">
+                  <button
+                    onClick={() => { handleCopyUserAccessLink(); setIsMobileMenuOpen(false); }}
+                    className="w-full flex items-center justify-center gap-2 p-2.5 bg-gradient-to-r from-amber-500 via-rose-500 to-indigo-600 text-white rounded-xl cursor-pointer font-extrabold text-xs shadow-md"
+                  >
+                    <LinkIcon className="w-4 h-4" />
+                    <span>{copyNotification ? 'Link Disalin!' : 'Salin Link Akses User'}</span>
+                  </button>
+
+                  <button
+                    onClick={() => { setIsOwnerPanelOpen(true); setIsMobileMenuOpen(false); }}
+                    className="w-full flex items-center justify-center gap-2 p-2 bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 rounded-xl cursor-pointer font-black text-xs"
+                  >
+                    <Crown className="w-4 h-4 text-amber-500" />
+                    <span>Buka Owner Admin Panel</span>
+                  </button>
+                </div>
               )}
 
               <button

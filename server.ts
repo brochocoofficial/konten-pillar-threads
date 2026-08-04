@@ -386,7 +386,22 @@ function extractToken(req: Request): string | null {
       return;
     }
 
-    if (accessKey.trim().toUpperCase() !== activeKey.trim().toUpperCase()) {
+    let inputKey = (accessKey || '').trim();
+    if (inputKey.startsWith('enc_')) {
+      try {
+        let k = inputKey.substring(4);
+        while (k.length % 4 !== 0) k += '=';
+        k = k.replace(/-/g, '+').replace(/_/g, '/');
+        const decoded = Buffer.from(k, 'base64').toString('utf-8');
+        if (decoded.startsWith('PF2026:')) {
+          inputKey = decoded.substring(7);
+        }
+      } catch (e) {
+        console.warn('Could not decode encrypted accessKey:', e);
+      }
+    }
+
+    if (inputKey.toUpperCase() !== activeKey.trim().toUpperCase()) {
       res.status(401).json({
         code: 'INVALID_ACCESS_KEY',
         error: 'Akses Tidak Valid: Link akses tidak berlaku atau telah diganti oleh Owner.'

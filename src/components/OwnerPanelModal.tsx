@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { User, InviteLink } from '../types';
 import { useAuth } from '../context/AuthContext';
+import { encodeAccessKey } from '../lib/security';
 import { 
   Crown, ShieldAlert, Users, Link as LinkIcon, UserPlus, Trash2, 
   Power, RefreshCw, KeyRound, Copy, Check, Search, X, Clock, Monitor, 
@@ -544,34 +545,6 @@ export const OwnerPanelModal: React.FC<OwnerPanelModalProps> = ({ isOpen, onClos
                             </span>
                           </div>
                         )}
-
-                        {/* Reset Password Prompt Inline */}
-                        {resetPassUserId === u.id && (
-                          <div className="mt-2 p-2.5 bg-slate-100 dark:bg-slate-900 rounded-xl border border-slate-300 dark:border-slate-700 space-y-2 max-w-sm">
-                            <div className="text-xs font-bold">Reset Password untuk @{u.username}</div>
-                            <div className="flex gap-2">
-                              <input
-                                type="text"
-                                placeholder="Password baru..."
-                                value={resetPassValue}
-                                onChange={(e) => setResetPassValue(e.target.value)}
-                                className="flex-1 px-2.5 py-1 text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-800 dark:text-slate-100"
-                              />
-                              <button
-                                onClick={() => handleResetPasswordSubmit(u.id)}
-                                className="px-3 py-1 bg-rose-600 text-white text-xs font-bold rounded-lg hover:bg-rose-700 transition-colors"
-                              >
-                                Simpan
-                              </button>
-                              <button
-                                onClick={() => setResetPassUserId(null)}
-                                className="px-2 py-1 text-xs text-slate-400 hover:text-slate-200"
-                              >
-                                Batal
-                              </button>
-                            </div>
-                          </div>
-                        )}
                       </div>
 
                       {/* Action Buttons */}
@@ -600,18 +573,6 @@ export const OwnerPanelModal: React.FC<OwnerPanelModalProps> = ({ isOpen, onClos
                             {u.status === 'active' ? 'Nonaktifkan' : 'Aktifkan'}
                           </button>
                         )}
-
-                        {/* Reset Password */}
-                        <button
-                          onClick={() => {
-                            setResetPassUserId(u.id);
-                            setResetPassValue('');
-                          }}
-                          className="p-1.5 text-slate-500 hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors cursor-pointer"
-                          title="Reset Password User"
-                        >
-                          <KeyRound className="w-4 h-4" />
-                        </button>
 
                         {/* Delete User */}
                         {u.id !== currentUser?.id && (
@@ -659,7 +620,7 @@ export const OwnerPanelModal: React.FC<OwnerPanelModalProps> = ({ isOpen, onClos
                     <input
                       type="text"
                       readOnly
-                      value={`${window.location.origin}${window.location.pathname}?access_key=${accessKey}`}
+                      value={`${window.location.origin.replace('ais-dev-', 'ais-pre-')}${window.location.pathname}?access_key=${encodeURIComponent(encodeAccessKey(accessKey))}`}
                       className="flex-1 px-3 py-2 text-xs font-mono bg-slate-900 border border-slate-700 rounded-lg text-amber-300 w-full"
                     />
                     <button

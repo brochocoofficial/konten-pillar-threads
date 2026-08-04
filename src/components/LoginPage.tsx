@@ -10,17 +10,6 @@ export const LoginPage: React.FC = () => {
   const [loginError, setLoginError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleQuickLoginOwner = async () => {
-    setPin('ownerkonten123');
-    setLoginError(null);
-    setIsSubmitting(true);
-    const res = await loginWithPin('ownerkonten123');
-    setIsSubmitting(false);
-    if (!res.success) {
-      setLoginError(res.error || 'Login Owner gagal.');
-    }
-  };
-
   const handlePinSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError(null);
@@ -116,32 +105,6 @@ export const LoginPage: React.FC = () => {
             <span className="text-[10px] font-extrabold uppercase px-2 py-1 rounded-lg bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
               Owner Mode
             </span>
-          </div>
-
-          {/* 1-CLICK QUICK DEMO LOGIN BUTTON */}
-          <button
-            type="button"
-            onClick={handleQuickLoginOwner}
-            disabled={isSubmitting}
-            className="w-full p-3.5 rounded-xl bg-gradient-to-r from-indigo-950/90 via-slate-900 to-rose-950/90 border border-indigo-500/30 hover:border-rose-500/50 text-indigo-200 hover:text-white text-xs font-extrabold flex items-center justify-between transition-all cursor-pointer shadow-xs group"
-          >
-            <div className="flex items-center gap-2.5">
-              <div className="w-7 h-7 rounded-lg bg-indigo-600/40 border border-indigo-400/40 flex items-center justify-center text-rose-300">
-                <Sparkles className="w-4 h-4 text-rose-400 group-hover:rotate-12 transition-transform" />
-              </div>
-              <div className="text-left">
-                <span className="block text-[10px] text-slate-400 font-medium">Akses Cepat Admin</span>
-                <span className="text-xs text-rose-300 font-bold">1-Click Login Owner</span>
-              </div>
-            </div>
-            <span className="px-2.5 py-1 text-[10px] font-black uppercase rounded-md bg-rose-500/20 border border-rose-500/30 text-rose-300">
-              PIN: ownerkonten123
-            </span>
-          </button>
-
-          <div className="relative flex items-center justify-center">
-            <div className="border-t border-slate-800 w-full" />
-            <span className="bg-slate-900 px-3 text-[10px] uppercase font-bold text-slate-500 tracking-wider absolute">atau ketik PIN</span>
           </div>
 
           <form onSubmit={handlePinSubmit} className="space-y-4">

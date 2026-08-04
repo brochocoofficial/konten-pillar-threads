@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { User, DeviceInfo } from '../types';
 import { getClientDeviceInfo } from '../utils/deviceInfo';
+import { encodeAccessKey, decodeAccessKey } from '../lib/security';
 
 interface AuthContextType {
   user: User | null;
@@ -189,7 +190,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     // Client-side fallback if server API fails (e.g. offline/static)
-    if (accessKey.trim().toUpperCase() === DEFAULT_ACCESS_KEY) {
+    const decodedKey = decodeAccessKey(accessKey);
+    if (decodedKey.toUpperCase() === DEFAULT_ACCESS_KEY || accessKey.trim().toUpperCase() === DEFAULT_ACCESS_KEY) {
       const fallbackToken = 'vcl_user_token_' + Date.now();
       const userObj: User = {
         id: 'usr_user_' + Date.now(),
@@ -322,8 +324,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.warn('Error fetching active access key:', e);
     }
 
-    const baseUrl = window.location.origin + window.location.pathname;
-    return `${baseUrl}?access_key=${encodeURIComponent(key)}`;
+    const encryptedKey = encodeAccessKey(key);
+    const origin = window.location.origin.replace('ais-dev-', 'ais-pre-');
+    const baseUrl = origin + window.location.pathname;
+    return `${baseUrl}?access_key=${encodeURIComponent(encryptedKey)}`;
   };
 
   // Logout Handler
