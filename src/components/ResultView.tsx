@@ -55,21 +55,21 @@ export const ResultView: React.FC<ResultViewProps> = ({
   });
 
   return (
-    <div className="max-w-7xl mx-auto py-6 sm:py-8 px-4 sm:px-6 space-y-6 text-slate-900 dark:text-slate-100 transition-colors duration-200">
+    <div className="max-w-7xl mx-auto py-4 sm:py-8 px-3 sm:px-6 space-y-4 sm:space-y-6 text-slate-900 dark:text-slate-100 transition-colors duration-200">
       {/* ACTION BAR TOP */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white/90 dark:bg-slate-900/90 border border-slate-200/80 dark:border-slate-800 p-4 rounded-2xl shadow-xs">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white/90 dark:bg-slate-900/90 border border-slate-200/80 dark:border-slate-800 p-3.5 sm:p-4 rounded-2xl shadow-xs">
         <button
           onClick={onBackToForm}
-          className="flex items-center gap-2 px-4 py-2.5 text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 rounded-xl transition-colors cursor-pointer"
+          className="flex items-center justify-center gap-2 px-3.5 py-2.5 text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 rounded-xl transition-colors cursor-pointer min-h-[44px]"
         >
           <ArrowLeft className="w-4 h-4 text-indigo-600 dark:text-rose-400" />
           <span>&larr; Kembali ke Form / Edit Input</span>
         </button>
 
-        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+        <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 w-full sm:w-auto">
           <button
             onClick={onRegenerate}
-            className="flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 border border-indigo-200 dark:border-indigo-800 rounded-xl transition-colors cursor-pointer"
+            className="flex items-center justify-center gap-1.5 px-3 py-2.5 text-xs font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 border border-indigo-200 dark:border-indigo-800 rounded-xl transition-colors cursor-pointer min-h-[44px]"
           >
             <Sparkles className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
             <span>Regenerate</span>
@@ -78,26 +78,26 @@ export const ResultView: React.FC<ResultViewProps> = ({
           {/* SINGLE PDF DOWNLOAD BUTTON */}
           <button
             onClick={handleDownloadPDF}
-            className="flex items-center gap-2 px-4 py-2.5 text-xs font-black text-white bg-gradient-to-r from-indigo-600 via-indigo-500 to-rose-500 hover:from-indigo-700 hover:to-rose-600 rounded-xl shadow-xs transition-all cursor-pointer"
+            className="flex items-center justify-center gap-2 px-3 py-2.5 text-xs font-black text-white bg-gradient-to-r from-indigo-600 via-indigo-500 to-rose-500 hover:from-indigo-700 hover:to-rose-600 rounded-xl shadow-xs transition-all cursor-pointer min-h-[44px]"
             title="Download Dokumen Perencanaan Konten PDF"
           >
             <Download className="w-4 h-4 text-white" />
-            <span>Export PDF Planner</span>
+            <span>Export PDF</span>
           </button>
         </div>
       </div>
 
       {/* OVERVIEW SUMMARY CARD */}
-      <div className="bg-white/90 dark:bg-slate-900/90 border border-slate-200/80 dark:border-slate-800 p-6 rounded-2xl shadow-xs space-y-4">
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-          <div className="space-y-1.5">
-            <div className="flex items-center gap-2">
-              <span className="px-3 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-widest bg-rose-50 dark:bg-rose-950/50 border border-rose-200/80 dark:border-rose-800/80 text-rose-600 dark:text-rose-300">
+      <div className="bg-white/90 dark:bg-slate-900/90 border border-slate-200/80 dark:border-slate-800 p-4 sm:p-6 rounded-2xl shadow-xs space-y-3.5">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-rose-50 dark:bg-rose-950/50 border border-rose-200/80 dark:border-rose-800/80 text-rose-600 dark:text-rose-300">
                 {result.category}
               </span>
-              <span className="text-xs text-slate-400 dark:text-slate-500">Dibuat pada: {result.generatedAt}</span>
+              <span className="text-[11px] text-slate-400 dark:text-slate-500">Dibuat pada: {result.generatedAt}</span>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+            <h1 className="text-xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
               {result.productName}
             </h1>
             <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 max-w-2xl leading-relaxed">
@@ -105,12 +105,12 @@ export const ResultView: React.FC<ResultViewProps> = ({
             </p>
           </div>
 
-          <div className="flex flex-wrap gap-3 text-xs bg-slate-50 dark:bg-slate-800/60 p-3.5 rounded-xl border border-slate-200/80 dark:border-slate-700/80">
+          <div className="flex flex-wrap gap-2.5 text-xs bg-slate-50 dark:bg-slate-800/60 p-3 rounded-xl border border-slate-200/80 dark:border-slate-700/80 w-full md:w-auto">
             <div>
               <span className="text-slate-400 dark:text-slate-500 block text-[10px] font-bold uppercase tracking-wider">Tujuan:</span>
               <span className="font-extrabold text-indigo-700 dark:text-rose-400">{result.goal}</span>
             </div>
-            <div className="border-l border-slate-200 dark:border-slate-700 pl-3">
+            <div className="border-l border-slate-200 dark:border-slate-700 pl-2.5">
               <span className="text-slate-400 dark:text-slate-500 block text-[10px] font-bold uppercase tracking-wider">Platform:</span>
               <span className="font-extrabold text-sky-700 dark:text-sky-400 uppercase">{result.platform}</span>
             </div>
@@ -118,17 +118,17 @@ export const ResultView: React.FC<ResultViewProps> = ({
         </div>
 
         {/* Selected Audiences and Tones Badges */}
-        <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex flex-wrap items-center gap-2 text-xs">
-          <span className="text-slate-500 dark:text-slate-400 font-bold text-[11px] uppercase tracking-wider">Audiences:</span>
+        <div className="pt-2.5 border-t border-slate-100 dark:border-slate-800 flex flex-wrap items-center gap-1.5 text-xs">
+          <span className="text-slate-500 dark:text-slate-400 font-bold text-[10px] uppercase tracking-wider">Audiences:</span>
           {result.selectedAudiences.map((aud) => (
-            <span key={aud} className="px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-[11px] font-medium">
+            <span key={aud} className="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-[10px] font-medium">
               {aud}
             </span>
           ))}
-          <span className="text-slate-300 dark:text-slate-700 mx-1">|</span>
-          <span className="text-slate-500 dark:text-slate-400 font-bold text-[11px] uppercase tracking-wider">Tones:</span>
+          <span className="text-slate-300 dark:text-slate-700 mx-0.5">|</span>
+          <span className="text-slate-500 dark:text-slate-400 font-bold text-[10px] uppercase tracking-wider">Tones:</span>
           {result.selectedTones.map((t) => (
-            <span key={t} className="px-2.5 py-0.5 rounded-full bg-rose-50 dark:bg-rose-950/40 border border-rose-200/80 dark:border-rose-800/80 text-rose-600 dark:text-rose-300 text-[11px] font-medium">
+            <span key={t} className="px-2 py-0.5 rounded-full bg-rose-50 dark:bg-rose-950/40 border border-rose-200/80 dark:border-rose-800/80 text-rose-600 dark:text-rose-300 text-[10px] font-medium">
               {t}
             </span>
           ))}

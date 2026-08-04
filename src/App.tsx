@@ -155,8 +155,10 @@ export default function App() {
 
       {/* Mobile Bottom Navigation Bar */}
       <BottomNav
+        currentScreen={currentScreen}
         activeTab={activeTab}
         setActiveTab={handleTabChange}
+        onReset={handleReset}
         onOpenRules={() => setIsRulesOpen(true)}
         onOpenHistory={() => setIsHistoryOpen(true)}
       />

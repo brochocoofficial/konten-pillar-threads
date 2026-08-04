@@ -207,38 +207,38 @@ export const FormInput: React.FC<FormInputProps> = ({ onSubmit, isLoading }) => 
   });
 
   return (
-    <div className="max-w-4xl mx-auto py-6 sm:py-8 px-4 sm:px-6 space-y-6 sm:space-y-8">
+    <div className="max-w-4xl mx-auto py-4 sm:py-8 px-3 sm:px-6 space-y-4 sm:space-y-8">
       {/* Hero Header Section */}
-      <div className="text-center space-y-3 bg-gradient-to-b from-rose-500/10 via-indigo-500/5 to-transparent p-6 sm:p-8 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-xs">
-        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white dark:bg-slate-900 border border-rose-200/80 dark:border-rose-900/60 text-rose-600 dark:text-rose-400 text-xs font-extrabold uppercase tracking-widest shadow-2xs">
+      <div className="text-center space-y-2.5 bg-gradient-to-b from-rose-500/10 via-indigo-500/5 to-transparent p-4 sm:p-8 rounded-2xl sm:rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-xs">
+        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white dark:bg-slate-900 border border-rose-200/80 dark:border-rose-900/60 text-rose-600 dark:text-rose-400 text-[10px] sm:text-xs font-extrabold uppercase tracking-wider shadow-2xs">
           <Zap className="w-3.5 h-3.5 text-rose-500 fill-rose-500" />
           <span>Formula Master Content Planner</span>
         </div>
         
-        <h1 className="text-2xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight leading-tight">
+        <h1 className="text-xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight leading-tight">
           Perencanaan Pilar Konten & 7-Hari Utas Algoritmik
         </h1>
         
-        <p className="text-slate-600 dark:text-slate-300 text-sm sm:text-base max-w-2xl mx-auto leading-relaxed">
+        <p className="text-slate-600 dark:text-slate-300 text-xs sm:text-base max-w-2xl mx-auto leading-relaxed">
           Otomatisasi pilar konten, hook virality score, & rangkaian utas siap pakai berbasis <span className="text-indigo-600 dark:text-rose-400 font-bold">Audience Matrix</span> & <span className="text-indigo-600 dark:text-indigo-400 font-bold">Rule Algoritma 2026</span>.
         </p>
 
-        <div className="flex flex-wrap items-center justify-center gap-2 pt-2 text-[11px] font-semibold text-slate-600 dark:text-slate-400">
-          <span className="flex items-center gap-1 bg-white dark:bg-slate-800 px-3 py-1 rounded-full border border-slate-200 dark:border-slate-700 shadow-2xs">
+        <div className="flex flex-wrap items-center justify-center gap-1.5 pt-1 text-[10px] sm:text-[11px] font-semibold text-slate-600 dark:text-slate-400">
+          <span className="flex items-center gap-1 bg-white dark:bg-slate-800 px-2.5 py-1 rounded-full border border-slate-200 dark:border-slate-700 shadow-2xs">
             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> Export PDF
           </span>
-          <span className="flex items-center gap-1 bg-white dark:bg-slate-800 px-3 py-1 rounded-full border border-slate-200 dark:border-slate-700 shadow-2xs">
+          <span className="flex items-center gap-1 bg-white dark:bg-slate-800 px-2.5 py-1 rounded-full border border-slate-200 dark:border-slate-700 shadow-2xs">
             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> Saved to History
           </span>
-          <span className="flex items-center gap-1 bg-white dark:bg-slate-800 px-3 py-1 rounded-full border border-slate-200 dark:border-slate-700 shadow-2xs">
+          <span className="flex items-center gap-1 bg-white dark:bg-slate-800 px-2.5 py-1 rounded-full border border-slate-200 dark:border-slate-700 shadow-2xs">
             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> Hook Virality Score
           </span>
         </div>
       </div>
 
       {/* QUICK PRESETS (CONTOH CEPAT - MINIMALIST REDESIGN) */}
-      <div className="bg-white/90 dark:bg-slate-900/90 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-4 sm:p-5 shadow-xs space-y-3">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-100 dark:border-slate-800">
+      <div className="bg-white/90 dark:bg-slate-900/90 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-3.5 sm:p-5 shadow-xs space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 pb-2 border-b border-slate-100 dark:border-slate-800">
           <div className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-wider text-rose-600 dark:text-rose-400">
             <MousePointerClick className="w-4 h-4 text-rose-500" />
             <span>Contoh Cepat (1-Click Autofill)</span>
@@ -249,7 +249,7 @@ export const FormInput: React.FC<FormInputProps> = ({ onSubmit, isLoading }) => 
         </div>
 
         {/* Minimalist Filter Category Chips */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar text-xs">
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar text-xs touch-pan-x">
           {['Semua', 'Skincare', 'AI & Tech', 'F&B', 'Fashion'].map((catLabel) => (
             <button
               key={catLabel}
@@ -267,14 +267,14 @@ export const FormInput: React.FC<FormInputProps> = ({ onSubmit, isLoading }) => 
         </div>
 
         {/* Compact Sleek Preset Cards Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
           {filteredPresets.map((preset) => (
             <div
               key={preset.id}
               onClick={() => handleSelectPreset(preset)}
-              className="p-3 rounded-xl bg-slate-50/80 dark:bg-slate-800/40 hover:bg-rose-50/60 dark:hover:bg-slate-800 border border-slate-200/70 dark:border-slate-700/80 hover:border-rose-300 dark:hover:border-rose-800 transition-all duration-150 cursor-pointer group flex items-start justify-between gap-3"
+              className="p-3 rounded-xl bg-slate-50/80 dark:bg-slate-800/40 hover:bg-rose-50/60 dark:hover:bg-slate-800 border border-slate-200/70 dark:border-slate-700/80 hover:border-rose-300 dark:hover:border-rose-800 transition-all duration-150 cursor-pointer group flex items-start justify-between gap-2.5"
             >
-              <div className="space-y-1 min-w-0">
+              <div className="space-y-0.5 min-w-0">
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate group-hover:text-rose-600 dark:group-hover:text-rose-400 transition-colors">
                     {preset.title}
@@ -789,17 +789,17 @@ export const FormInput: React.FC<FormInputProps> = ({ onSubmit, isLoading }) => 
 
         {/* SUBMIT GENERATE BUTTON */}
         {!isLoading && (
-          <div className="pt-2 sticky bottom-20 md:bottom-6 z-20">
+          <div className="pt-2 sticky bottom-16 md:bottom-6 z-20 backdrop-blur-md bg-slate-50/80 dark:bg-slate-950/80 p-2 sm:p-0 rounded-2xl border border-slate-200/50 dark:border-slate-800/50 sm:border-0 shadow-lg sm:shadow-none">
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full py-4 px-6 rounded-2xl font-black text-base sm:text-lg text-white bg-gradient-to-r from-indigo-600 via-indigo-500 to-rose-500 hover:from-indigo-700 hover:to-rose-600 shadow-xl shadow-indigo-600/25 hover:shadow-indigo-600/35 hover:scale-[1.005] active:scale-[0.995] flex items-center justify-center gap-3 transition-all duration-200 cursor-pointer min-h-[52px]"
+              className="w-full py-3.5 sm:py-4 px-4 sm:px-6 rounded-xl sm:rounded-2xl font-black text-sm sm:text-lg text-white bg-gradient-to-r from-indigo-600 via-indigo-500 to-rose-500 hover:from-indigo-700 hover:to-rose-600 shadow-xl shadow-indigo-600/25 hover:shadow-indigo-600/35 hover:scale-[1.005] active:scale-[0.995] flex items-center justify-center gap-2 sm:gap-3 transition-all duration-200 cursor-pointer min-h-[48px] sm:min-h-[52px]"
             >
-              <Sparkles className="w-5 h-5 text-white" />
+              <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
               <span>Generate Content Pillars & 7-Day Utas</span>
-              <ArrowRight className="w-5 h-5" />
+              <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
-            <p className="text-center text-xs text-slate-500 dark:text-slate-400 mt-2 font-medium">
+            <p className="text-center text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 mt-1.5 font-medium">
               Sistem akan memproses Pilar Konten, Score Virality Hook, & Rangkaian Utas siap simpan PDF.
             </p>
           </div>
