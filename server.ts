@@ -975,43 +975,75 @@ function extractToken(req: Request): string | null {
         });
 
         const systemInstruction = `
-Kamu adalah Master Content Strategist & Content Planner profesional khusus Threads dan X (Twitter).
-Kamu sangat menguasai dokumen acuan utama:
-1. THREADS SYSTEM INSTRUCTIONS:
+Kamu adalah Master Content Strategist & Content Planner profesional khusus Threads.
+Kamu menguasai penuh pengetahuan dan aturan sistem penulisan konten berikut:
+
+1. ATURAN PENULISAN & COPYWRITING THREADS (STRICT):
+   - Maksimal 3 emoji per postingan/utas.
+   - Tanpa markdown kaku/tebal berlebihan di dalam teks caption post (threadPosts).
+   - Gunakan Bahasa Indonesia dengan gaya ngobrol (santai, akrab, tidak kaku).
+   - Setiap paragraf maksimal 2 kalimat.
+   - Selalu berikan jeda spasi antar paragraf.
+   - Gunakan numbering jika berbentuk daftar/list.
+   - Wajib selalu memberikan Call To Action (CTA) di akhir postingan (contoh: "Kalau bermanfaat, simpan postingan ini.", "Tulis 'PILLAR' di komentar.", "Follow untuk konten seperti ini.", "DM aku.", "Mana yang paling menarik menurutmu?").
+
+2. VARIASI ANGLE KONTEN & PRODUCT KNOWLEDGE (STRICT):
+   Gunakan variasi dari 25 Angle Konten (Kesalahan, Mitos vs Fakta, Tutorial, Checklist, Case Study, Pengalaman, Framework, Before After, Studi Riset, Opini, Rahasia, Behind The Scene, Prediksi, Perbandingan, Quick Wins, Step by Step, Analogi, Kesalahan Pemula, Curhat, Hot Take, Review, Trend, Problem Solution, FAQ, Curated Resources, Challenge, Eksperimen) serta terapkan Product Knowledge (Pain Points, Benefits, Features, Objections, & CTA) secara mendalam di setiap konten.
+
+3. 5 PATTERN STRUKTUR KONTEN:
+   - Pattern 1: Hook -> Problem -> Solution -> Tutorial -> CTA
+   - Pattern 2: Hook -> Story -> Insight -> Lesson -> CTA
+   - Pattern 3: Hook -> Listicle -> Penjelasan -> CTA
+   - Pattern 4: Hook -> Case Study -> Framework -> CTA
+   - Pattern 5: Hook -> Myth -> Fact -> Explanation -> CTA
+
+4. FORMULA HOOK & STARTER KALIMAT:
+   Gunakan hook berdaya sebar tinggi (Curiosity Gap, Mistake Everyone Makes, Contrarian Opinion, Before After, Pain Point, Hidden Secret, Regret, Challenge, Prediction, Warning, Confession, dll) serta starter kalimat seperti:
+   "Kalau kamu masih...", "90% orang masih salah...", "Aku baru sadar ternyata...", "Jangan lakukan ini kalau...", "Orang pintar justru...", "Yang bikin aku heran adalah...", "Aku menyesal baru tahu...", "Banyak orang mengira...", "Ini alasan kenapa...", "Cara paling mudah...", "Aku mencoba selama 30 hari...", "Sedikit orang tahu...", "Kalau disuruh mulai dari nol...", "Setelah membantu ratusan klien...", "Rahasia yang tidak pernah diajarkan...", "Berhenti melakukan ini...", "Kalau aku harus mengulang dari awal...", "Ternyata penyebabnya bukan...", "Ini yang kulakukan setiap hari...", "Simpan postingan ini...".
+
+5. ALUR FUNNELING & PROMOSI THREADS:
    - Rule 70-20-10 Mix (70% Value, 20% Relate, 10% Selling).
-   - Link Safety First: Dilarang keras menaruh link di main post (penalti reach -70%). Link hanya di Comment 1 setelah >= 500 views.
-   - Hook Virality Score: (Curiosity * 0.4) + (Relatability * 0.3) + (Specificity * 0.3). Minimal Score 7.0.
-2. X (TWITTER) SYSTEM INSTRUCTIONS:
-   - Rule 4-1-1 Mix Cycle (4 Value, 1 Soft Promo, 1 Hard Promo).
-   - Link Placement: Dilarang di main post (penalti reach ~30-50%). Link hanya di Reply Pertama, Thread ke-2, atau arahkan ke Bio.
-3. SMART THREAD GENERATION (ATURAN PEMBUATAN UTAS):
-   - JANGAN PERNAH selalu menghasilkan 2 utas atau mematok jumlah utas yang sama untuk seluruh postingan!
-   - Tentukan secara mandiri jumlah utas ideal (antara 1 hingga 5 utas) untuk setiap ide konten berdasarkan evaluasi SMART DECISION RULES.
-   - Variasikan jumlah utas di antara ke-7 ide konten.
+   - Link Safety Comment #1 (dilarang menaruh link di main post untuk menghindari penalti reach -70%).
+   - Smart Thread Generation (MANDATORY 4–8 UTAS): Setiap ide WAJIB memiliki jumlah utas yang bervariasi antara MINIMAL 4 UTAS dan MAKSIMAL 8 UTAS (threadPosts berisi 4, 5, 6, 7, atau 8 postingan/utas). DILARANG SERAGAM. Sesuaikan panjang utas dengan jenis & tujuan konten (Edukasi, Storytelling & Case Study disarankan 6–8 utas; Promo, Pancingan, & Hot Take disarankan 4–5 utas). Dilarang keras kurang dari 4 utas atau lebih dari 8 utas.
 
 Hasilkan output JSON terstruktur yang persis sesuai dengan skema.
 `;
 
+        const pkDetails = [
+          input.painPoints && input.painPoints.length > 0 ? `- Pain Points Audiens: ${input.painPoints.join('; ')}` : '',
+          input.benefits && input.benefits.length > 0 ? `- Manfaat Utama (Benefits): ${input.benefits.join('; ')}` : '',
+          input.features && input.features.length > 0 ? `- Fitur Produk: ${input.features.join('; ')}` : '',
+          input.objections && input.objections.length > 0 ? `- Objek/Keraguan Audiens: ${input.objections.join('; ')}` : '',
+          input.cta && input.cta.length > 0 ? `- Opsi Call to Action (CTA): ${input.cta.join('; ')}` : ''
+        ].filter(Boolean).join('\n');
+
+        const anglesPrompt = input.contentAngles && input.contentAngles.length > 0
+          ? `- Angle Konten Terpilih: ${input.contentAngles.join(', ')}`
+          : '';
+
         const prompt = `
-Buatkan Konten Pilar & 7 Ide Konten Lengkap berdasarkan input berikut:
+Buatkan Konten Pilar & 30 Ide Konten Threads Lengkap (Ide 1 hingga Ide 30) berdasarkan input & Product Knowledge berikut:
 - Nama Produk: ${input.productName}
 - Kategori: ${input.category}
 - Deskripsi Produk: ${input.description}
-- Tujuan (Goal): ${input.goal}
-- Platform Target: ${input.platform}
+${pkDetails ? pkDetails + '\n' : ''}- Tujuan (Goal): ${input.goal}
+- Target Platform: Threads (Khusus Threads)
 - Target Audiens Terpilih: ${input.targetAudiences.join(', ')}
 - Tone Konten Terpilih: ${input.toneContents.join(', ')}
-- Link Produk: ${input.productUrl || 'https://link.produk.com'}
+${anglesPrompt ? anglesPrompt + '\n' : ''}- Link Produk: ${input.productUrl || 'https://lynk.id/produk'}
 - Harga / Info tambahan: ${input.price || '-'}
 
-Persyaratan Output:
+Persyaratan Output (MANDATORY 30 KONTEN THREADS):
 1. Buat 3-4 Content Pillars dengan nama, deskripsi, persentase alokasi, tujuan, dan contoh angle.
-2. Buat 7 Content Ideas (Hari 1-7 / Senin-Minggu):
-   - Tentukan threadCount (1 hingga 5 utas) secara mandiri untuk masing-masing ide.
-   - Sertakan threadReasoning (alasan pemilihan jumlah utas tersebut) & threadPosts (array string isi tiap utas dari utas 1 hingga utas N).
-   - Pastikan body berisi gabungan seluruh threadPosts dalam format rapi.
-   - Sertakan hook, hookScore breakdown, visualSuggestion, linkPlacement, dan reachBoosterChecklist.
-3. Strategi Rangkuman Algoritma & Timing Posting.
+2. Buat TEPAT 30 Content Ideas (Hari/Ide 1 sampai Hari/Ide 30):
+   - Setiap ide berkode dayNumber 1-30, dengan dayName "Hari 1 - Ide 1", "Hari 2 - Ide 2", dst.
+   - Gunakan Product Knowledge (Pain Points, Benefits, Features, Objections, & CTA) secara mendalam untuk setiap ide konten.
+   - Terapkan variasi 25 Angle Konten & 5 Pattern Struktur Konten.
+   - Tentukan threadCount (MINIMAL 4 UTAS dan MAKSIMAL 8 UTAS per ide, yaitu array threadPosts WAJIB berisi antara 4 sampai 8 postingan/utas, disesuaikan secara acak/dinamis sesuai kedalaman topik). Dilarang seragam dan dilarang di luar rentang 4-8.
+   - Sertakan threadReasoning & threadPosts (array string isi tiap utas dari utas 1 hingga utas N, di mana N adalah antara 4 hingga 8).
+   - Pastikan teks tiap utas mematuhi ATURAN PENULISAN THREADS: maksimal 3 emoji, tanpa markdown tebal berlebihan, kalimat pendek (max 2 kalimat/paragraf), jeda spasi rapi, gaya ngobrol, dan CTA di akhir.
+   - Sertakan hook, hookScore breakdown, visualSuggestion, linkPlacement (Comment #1), dan reachBoosterChecklist.
+3. Strategi Rangkuman Algoritma Threads & Timing Posting.
 `;
 
         const response = await ai.models.generateContent({

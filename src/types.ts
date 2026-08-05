@@ -68,9 +68,15 @@ export interface PresetData {
   platform: PlatformType;
   targetAudiences: string[];
   toneContents: string[];
+  contentAngles?: string[];
   productUrl?: string;
   price?: string;
   duration?: string;
+  painPoints?: string[];
+  benefits?: string[];
+  features?: string[];
+  objections?: string[];
+  cta?: string[];
 }
 
 export interface ContentPillar {
@@ -147,11 +153,18 @@ export interface GenerateFormInput {
   platform: PlatformType;
   targetAudiences: string[];
   toneContents: string[];
+  contentAngles?: string[];
   productUrl?: string;
   price?: string;
   misconception?: string;
   duration?: string;
   mistakes?: string[];
+  productKnowledgeId?: string;
+  painPoints?: string[];
+  benefits?: string[];
+  features?: string[];
+  objections?: string[];
+  cta?: string[];
 }
 
 export interface HistoryItem {

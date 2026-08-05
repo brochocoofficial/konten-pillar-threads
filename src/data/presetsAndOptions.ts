@@ -2,6 +2,36 @@ import { TargetAudienceOption, ToneOption, PresetData } from '../types';
 
 export const TARGET_AUDIENCES_THREADS: TargetAudienceOption[] = [
   {
+    id: 'content_creator_pemula',
+    platform: 'threads',
+    name: 'Content Creator Pemula',
+    age: '18-28 tahun',
+    vibe: 'CURIOUS + CRAVING GROWTH',
+    ciri: 'Kehabisan ide, tidak konsisten upload, views sedikit, tidak tahu cara buat hook, bingung menentukan niche',
+    masalah: 'Ingin konsisten posting, konten viral, followers bertambah, dan mendapat penghasilan',
+    toneWork: 'Relate, edukatif, kasih contoh nyata, bahasa ngobrol'
+  },
+  {
+    id: 'pebisnis_umkm',
+    platform: 'threads',
+    name: 'Pebisnis UMKM',
+    age: '22-40 tahun',
+    vibe: 'RESULTS ORIENTED + BUSY',
+    ciri: 'Penjualan sepi, brand belum dikenal, tidak punya waktu membuat konten',
+    masalah: 'Butuh leads, closing cepat, dan personal branding tanpa ribet',
+    toneWork: 'To the point, solusi praktis, case study, proven framework'
+  },
+  {
+    id: 'freelancer_pro',
+    platform: 'threads',
+    name: 'Freelancer',
+    age: '20-35 tahun',
+    vibe: 'VALUE & PORTFOLIO BUILDER',
+    ciri: 'Sepi klien, sulit menaikkan harga, portofolio kurang menarik',
+    masalah: 'Butuh klien rutin, pendapatan naik, dan branding profesional',
+    toneWork: 'Otoritatif, insight, pengalaman nyata, tips teruji'
+  },
+  {
     id: 'gen_z_overthinker',
     platform: 'threads',
     name: 'Gen Z Overthinker',
@@ -44,6 +74,36 @@ export const TARGET_AUDIENCES_THREADS: TargetAudienceOption[] = [
 ];
 
 export const TARGET_AUDIENCES_X: TargetAudienceOption[] = [
+  {
+    id: 'creator_pemula_x',
+    platform: 'x',
+    name: 'Content Creator Pemula',
+    age: '18-28 tahun',
+    vibe: 'CRAVING HOOKS & GROWTH',
+    ciri: 'Kehabisan ide, views sedikit, tidak tahu cara buat hook, bingung niche',
+    masalah: 'Ingin konsisten posting, konten viral, followers bertambah, cuan',
+    toneWork: 'Breakdown, thread, tips terstruktur, motivasi'
+  },
+  {
+    id: 'pebisnis_umkm_x',
+    platform: 'x',
+    name: 'Pebisnis UMKM',
+    age: '22-40 tahun',
+    vibe: 'GROWTH & CONVERSION',
+    ciri: 'Penjualan sepi, brand belum dikenal, tidak ada waktu bikin konten',
+    masalah: 'Butuh leads, closing, personal branding bisnis',
+    toneWork: 'Case study, angka, bukti konversi, frameworks'
+  },
+  {
+    id: 'freelancer_x',
+    platform: 'x',
+    name: 'Freelancer',
+    age: '20-35 tahun',
+    vibe: 'HIGH-TICKET & PORTFOLIO',
+    ciri: 'Sepi klien, sulit naikkan rate, portofolio standar',
+    masalah: 'Dapat klien rutin, pendapatan naik, personal brand kuat',
+    toneWork: 'Insights, value-first, cerita klien, otoritatif'
+  },
   {
     id: 'tech_founders_x',
     platform: 'x',
@@ -88,83 +148,359 @@ export const TARGET_AUDIENCES_X: TargetAudienceOption[] = [
 
 export const TONE_OPTIONS_THREADS: ToneOption[] = [
   {
-    id: 'curhat_raw',
+    id: 'friendly_santai',
     platform: 'threads',
-    name: 'Curhat Raw & Relate (Gen Z)',
-    description: 'Santai, huruf kecil, enter-enter, bahasa pergaulan sehari-hari',
-    vocab: ['jujurly', 'relate', 'wkwk', 'spill', 'healing', 'bestie', 'overthinking'],
-    vibe: 'Emosional, jujur, mengundang interaksi'
+    name: 'Friendly & Ngobrol (Santai)',
+    description: 'Bahasa santai, seperti ngobrol dengan teman, tidak terlalu formal, kalimat pendek',
+    vocab: ['jujurly', 'relate', 'btw', 'spill', 'bestie', 'yuk'],
+    vibe: 'Dekat, akrab, dan menyenangkan'
   },
   {
-    id: 'temen_curhat_jujur',
+    id: 'edukatif_step',
     platform: 'threads',
-    name: 'Temen Curhat Jujur & Mama Hack (Ibu Muda)',
-    description: 'Solutif, hangat, tanpa istilah kaku',
-    vocab: ['bun', 'jujur', 'hemat waktu', 'anak', 'btw', 'spill'],
-    vibe: 'Edukatif & Solutif untuk smart buyer'
+    name: 'Edukatif & Step-by-Step',
+    description: 'Menjelaskan langkah demi langkah, fokus memberi ilmu dan solusi jelas',
+    vocab: ['langkahnya', 'caranya', 'tipsnya', 'solusi', 'penting'],
+    vibe: 'Informatif, bernilai tinggi, memicu save'
   },
   {
-    id: 'to_the_point',
+    id: 'storytelling_alur',
     platform: 'threads',
-    name: 'To The Point & Logic (Cowok)',
-    description: 'Ringkas, maksimal 3 baris, langsung ke hasil tanpa basa-basi',
-    vocab: ['gw', 'simple', 'gak ribet', 'udah', 'hasilnya'],
-    vibe: 'Praktis, to the point'
+    name: 'Storytelling & Pengalaman',
+    description: 'Diawali cerita menarik, ada konflik/masalah, diakhiri pelajaran penting',
+    vocab: ['dulu aku', 'ternyata', 'kejadian ini', 'pelajarannya', 'pas itu'],
+    vibe: 'Emosional, mengikat pembaca dari awal'
   },
   {
-    id: 'review_blunt',
+    id: 'provokatif_curiosity',
     platform: 'threads',
-    name: 'Blunt Review & Bandingin Harga (Affiliate)',
-    description: 'Bahas angka, foto bukti, perbandingan produk jujur tanpa melebih-lebihkan',
-    vocab: ['worth it', 'zonk', 'rugi', 'bukti', 'bandingin'],
-    vibe: 'Transparan & meyakinkan'
+    name: 'Provokatif & Curiosity Booster',
+    description: 'Menggugah emosi, menantang pemikiran umum, mengandung curiosity tinggi',
+    vocab: ['stop lakukan ini', 'banyak yang salah', 'kenapa masih', 'rahasianya'],
+    vibe: 'Memicu diskusi dan komen rame'
+  },
+  {
+    id: 'otoritatif_expert',
+    platform: 'threads',
+    name: 'Otoritatif & Pengalaman Nyata',
+    description: 'Percaya diri, menggunakan data atau bukti pengalaman nyata tanpa terkesan menggurui',
+    vocab: ['setelah uji coba', 'faktanya', 'hasilnya', 'rekomendasiku'],
+    vibe: 'Membangun kepercayaan dan otoritas'
+  },
+  {
+    id: 'inspiratif_semangat',
+    platform: 'threads',
+    name: 'Inspiratif & Motivasi',
+    description: 'Membangkitkan semangat, fokus pada perubahan positif dan pertumbuhan',
+    vocab: ['percaya deh', 'kamu pasti bisa', 'mulai aja dulu', 'prosesnya'],
+    vibe: 'Positif dan menggerakkan'
+  },
+  {
+    id: 'humoris_santuy',
+    platform: 'threads',
+    name: 'Humoris & Ringan',
+    description: 'Ringan, ada candaan hangat, tidak berlebihan',
+    vocab: ['wkwk', 'benget', 'ngakak', 'repot bener', 'humor'],
+    vibe: 'Menghibur dan cepat viral'
   }
 ];
 
 export const TONE_OPTIONS_X: ToneOption[] = [
   {
-    id: 'santai_assertive',
+    id: 'friendly_x',
     platform: 'x',
-    name: 'Santai + Slightly Assertive (Edukasi & Insight)',
-    description: 'Memberi insight dengan percaya diri tanpa terkesan gurui',
-    vocab: ['real talk', 'banyak yang salah paham', 'the fact that', 'worth it'],
-    vibe: 'Informatif & Otoritatif'
+    name: 'Friendly & Conversational (Ngobrol)',
+    description: 'Bahasa santai ala ngobrol kafe, kalimat pendek, ramah pembaca',
+    vocab: ['real talk', 'jujur ya', 'btw', 'gimana menurut kalian'],
+    vibe: 'Akrab & mudah dipahami'
   },
   {
-    id: 'tegas_provokatif',
+    id: 'edukatif_x',
     platform: 'x',
-    name: 'Tegas & Hot Takes (Opini & Diskusi)',
-    description: 'Memicu diskusi tajam tapi tetap sopan',
-    vocab: ['unpopular opinion', 'stop buat kesalahan ini', 'kenapa masih banyak yang...'],
-    vibe: 'Memicu reply & retweet'
+    name: 'Edukatif & Frameworks (Solusi)',
+    description: 'Menjelaskan pola, panduan langkah demi langkah, dan framework teruji',
+    vocab: ['breakdown', 'framework', 'langkah 1-3', 'insight'],
+    vibe: 'High value & high retweets'
   },
   {
-    id: 'authentic_humor',
+    id: 'storytelling_x',
     platform: 'x',
-    name: 'Authentic & Self-Aware (Personal Branding)',
-    description: 'Jujur, santai, dibumbui humor ringan ala tech-twitter',
-    vocab: ['jujur ya', 'kemarin sempet', 'plot twist', 'sebagai orang yang'],
-    vibe: 'Dekat & manusiawi'
+    name: 'Storytelling & Case Study',
+    description: 'Membuka dengan cerita atau studi kasus nyata yang membuat penasaran',
+    vocab: ['kemarin nyobain', 'dulu versus sekarang', 'case study', 'alasan kenapa'],
+    vibe: 'Engagement tinggi & scroll stopper'
   },
   {
-    id: 'soft_sell_value',
+    id: 'provokatif_x',
     platform: 'x',
-    name: 'Soft Sell + Value First (Marketing / Selling)',
-    description: 'Bagikan 90% value terlebih dahulu sebelum arahkan ke link reply',
-    vocab: ['breakdown', 'caranya simpel', 'detailnya di reply', 'spill'],
-    vibe: 'High conversion'
+    name: 'Provokatif & Unpopular Opinion',
+    description: 'Menantang pemikiran konvensional dengan argumen kuat',
+    vocab: ['unpopular opinion', '90% orang salah', 'stop buang waktu'],
+    vibe: 'Pancing reply & perdebatan sehat'
   },
   {
-    id: 'conversational_story',
+    id: 'otoritatif_x',
     platform: 'x',
-    name: 'Conversational + Emotional (Storytelling)',
-    description: 'Bercerita seperti ngobrol langsung di Warkop / Kafe',
-    vocab: ['kemarin gue ngerasain', 'awalnya bingung', 'ternyata sesimpel ini'],
-    vibe: 'Menarik perhatian sejak baris pertama'
+    name: 'Otoritatif & Data-Driven',
+    description: 'Tegas, membawa data, metrik, atau hasil pengujian nyata',
+    vocab: ['data menunjukkan', 'hasil eksekusi', 'metrik', 'kesimpulan'],
+    vibe: 'Kredibel & profesional'
   }
 ];
 
+// 25 Content Angles
+export const ANGLES_LIST = [
+  'Kesalahan',
+  'Mitos vs Fakta',
+  'Tutorial',
+  'Checklist',
+  'Case Study',
+  'Pengalaman',
+  'Framework',
+  'Before After',
+  'Studi Riset',
+  'Opini',
+  'Rahasia',
+  'Behind The Scene',
+  'Prediksi',
+  'Perbandingan',
+  'Quick Wins',
+  'Step by Step',
+  'Analogi',
+  'Kesalahan Pemula',
+  'Curhat',
+  'Hot Take',
+  'Review',
+  'Trend',
+  'Problem Solution',
+  'FAQ',
+  'Curated Resources',
+  'Challenge',
+  'Eksperimen'
+];
+
+// 5 Structural Patterns
+export const STRUCTURAL_PATTERNS = [
+  {
+    id: 'pattern_1',
+    name: 'Pattern 1: Problem - Solution - Tutorial',
+    structure: ['Hook', 'Problem', 'Solution', 'Tutorial', 'CTA']
+  },
+  {
+    id: 'pattern_2',
+    name: 'Pattern 2: Storytelling & Lesson',
+    structure: ['Hook', 'Story', 'Insight', 'Lesson', 'CTA']
+  },
+  {
+    id: 'pattern_3',
+    name: 'Pattern 3: Listicle & Explainer',
+    structure: ['Hook', 'Listicle', 'Penjelasan', 'CTA']
+  },
+  {
+    id: 'pattern_4',
+    name: 'Pattern 4: Case Study & Framework',
+    structure: ['Hook', 'Case Study', 'Framework', 'CTA']
+  },
+  {
+    id: 'pattern_5',
+    name: 'Pattern 5: Myth Busting & Fact Check',
+    structure: ['Hook', 'Myth', 'Fact', 'Explanation', 'CTA']
+  }
+];
+
+// 20 Hook Templates
+export const HOOK_TEMPLATES = [
+  {
+    id: 'hook_001',
+    name: 'Curiosity Gap',
+    template: '{statement}.\n\nTapi yang paling mengejutkan...\n\n{open_loop}.'
+  },
+  {
+    id: 'hook_002',
+    name: 'Mistake Everyone Makes',
+    template: 'Hampir semua orang melakukan {mistake}.\n\nPadahal itulah alasan kenapa {negative_result}.'
+  },
+  {
+    id: 'hook_003',
+    name: 'Contrarian Opinion',
+    template: 'Semua orang bilang {common_belief}.\n\nAku justru percaya {opposite_belief}.'
+  },
+  {
+    id: 'hook_004',
+    name: 'Before After',
+    template: 'Dulu aku {before}.\n\nSekarang {after}.\n\nSemuanya berubah karena {reason}.'
+  },
+  {
+    id: 'hook_005',
+    name: 'Unexpected Discovery',
+    template: 'Aku cuma iseng {action}.\n\nYang terjadi setelahnya benar-benar di luar dugaan.'
+  },
+  {
+    id: 'hook_006',
+    name: 'Number Hook',
+    template: '{number} hal yang membuat {topic} gagal.\n\nNomor {highlight} paling sering diremehkan.'
+  },
+  {
+    id: 'hook_007',
+    name: 'Hidden Secret',
+    template: 'Ada satu rahasia tentang {topic}.\n\nAnehnya, hampir tidak ada yang membahasnya.'
+  },
+  {
+    id: 'hook_008',
+    name: 'Hard Truth',
+    template: 'Maaf kalau terdengar keras.\n\nTapi {hard_truth}.'
+  },
+  {
+    id: 'hook_009',
+    name: 'Pain Point',
+    template: 'Kalau kamu masih {problem},\n\nkemungkinan besar penyebabnya bukan {assumption}.'
+  },
+  {
+    id: 'hook_010',
+    name: 'Regret',
+    template: 'Kalau bisa mengulang dari awal,\n\naku tidak akan pernah {mistake}.'
+  },
+  {
+    id: 'hook_011',
+    name: 'Challenge',
+    template: 'Coba jawab jujur.\n\nKapan terakhir kali kamu {activity}?'
+  },
+  {
+    id: 'hook_012',
+    name: 'Prediction',
+    template: 'Dalam {timeframe},\n\n{prediction}.'
+  },
+  {
+    id: 'hook_013',
+    name: 'Shocking Statistic',
+    template: '{percentage}% orang {behavior}.\n\nKemungkinan besar kamu juga salah satunya.'
+  },
+  {
+    id: 'hook_014',
+    name: 'Question Hook',
+    template: 'Kenapa {question}?\n\nJawabannya mungkin berbeda dari yang kamu kira.'
+  },
+  {
+    id: 'hook_015',
+    name: 'Warning',
+    template: 'Jangan lakukan {action} sebelum kamu tahu ini.'
+  },
+  {
+    id: 'hook_016',
+    name: 'Confession',
+    template: 'Aku harus mengaku.\n\nSelama ini aku salah tentang {topic}.'
+  },
+  {
+    id: 'hook_017',
+    name: 'Expectation vs Reality',
+    template: 'Ekspektasi: {expectation}.\n\nRealitanya: {reality}.'
+  },
+  {
+    id: 'hook_018',
+    name: 'Simple Trick',
+    template: 'Satu kebiasaan kecil ini berhasil mengubah {result}.'
+  },
+  {
+    id: 'hook_019',
+    name: 'Authority',
+    template: 'Setelah {experience},\n\naku sadar satu hal tentang {topic}.'
+  },
+  {
+    id: 'hook_020',
+    name: 'FOMO',
+    template: 'Kalau kamu belum tahu {topic},\n\nkamu sudah tertinggal dari banyak orang.'
+  }
+];
+
+// Starter Hook Phrases
+export const HOOK_STARTER_PHRASES = [
+  'Kalau kamu masih...',
+  '90% orang masih salah...',
+  'Aku baru sadar ternyata...',
+  'Jangan lakukan ini kalau...',
+  'Orang pintar justru...',
+  'Yang bikin aku heran adalah...',
+  'Aku menyesal baru tahu...',
+  'Banyak orang mengira...',
+  'Ini alasan kenapa...',
+  'Cara paling mudah...',
+  'Aku mencoba selama 30 hari...',
+  'Sedikit orang tahu...',
+  'Kalau disuruh mulai dari nol...',
+  'Setelah membantu ratusan klien...',
+  'Rahasia yang tidak pernah diajarkan...',
+  'Berhenti melakukan ini...',
+  'Kalau aku harus mengulang dari awal...',
+  'Ternyata penyebabnya bukan...',
+  'Ini yang kulakukan setiap hari...',
+  'Simpan postingan ini...'
+];
+
+// Recommended Call-To-Actions (CTAs)
+export const CALL_TO_ACTIONS = [
+  'Kalau bermanfaat, simpan postingan ini.',
+  'Follow untuk konten seperti ini.',
+  'Bagikan ke temanmu.',
+  'Tulis "AI" di komentar.',
+  'Tulis "PILLAR" di komentar.',
+  'DM aku untuk panduan lengkapnya.',
+  'Bookmark dulu biar gak hilang.',
+  'Kalau ada pertanyaan, komentar ya.',
+  'Mana yang paling menarik menurutmu?'
+];
+
+// Copywriting Rules
+export const COPYWRITING_RULES = {
+  maxEmoji: 3,
+  noMarkdown: true,
+  language: 'Bahasa Indonesia',
+  sentenceLength: 'Pendek (maksimal 2 kalimat per paragraf)',
+  spacing: 'Gunakan jeda spasi antar paragraf',
+  numbering: 'Gunakan numbering jika berbentuk daftar/list',
+  toneStyle: 'Gaya ngobrol, santai, dan tidak kaku',
+  ctaPlacement: 'Selalu berikan CTA di akhir postingan'
+};
+
+export const CONTENT_ANGLES_LIST = [
+  'Kesalahan Pemula',
+  'Mitos vs Fakta',
+  'Tutorial & Step by Step',
+  'Checklist & Quick Wins',
+  'Before After',
+  'Pengalaman / Curhat',
+  'Case Study',
+  'Behind The Scene',
+  'Problem Solution',
+  'Framework & Rumus',
+  'Perbandingan / Review',
+  'Rahasia & Hidden Gem',
+  'Challenge / Tantangan',
+  'Studi Riset & Data',
+  'Opini / Hot Take',
+  'Prediksi Trend',
+  'Analogi Sederhana',
+  'Trend & Newsjack',
+  'FAQ / Pertanyaan Populer',
+  'Curated Resources',
+  'Eksperimen / Uji Coba',
+  'Unpopular Opinion',
+  'Regret Story / Penyesalan',
+  'Confession / Pengakuan Jujur',
+  'Direct Offer & CTA'
+];
+
 export const CATEGORIES_LIST = [
+  'Content Creator & Media Specialist',
+  'Affiliate Marketing',
+  'UMKM',
+  'Content Creator',
+  'AI',
+  'Personal Branding',
+  'Investasi',
+  'Online Course',
+  'Edukasi & Kursus Online',
+  'Jasa & Freelance / Agency',
+  'Pebisnis UMKM & Local Brand',
   'Skincare & Beauty',
   'Fashion & Apparel',
   'F&B / Kuliner Local Brand',
@@ -172,9 +508,7 @@ export const CATEGORIES_LIST = [
   'Produktivitas & Tools Kerja',
   'Keuangan & Edukasi Finansial',
   'Gadget & Elektronik',
-  'Home & Living',
-  'Jasa & Freelance / Agency',
-  'Edukasi & Kursus Online'
+  'Home & Living'
 ];
 
 export const GOALS_LIST = [
@@ -187,56 +521,135 @@ export const GOALS_LIST = [
 
 export const PRESETS_LIST: PresetData[] = [
   {
-    id: 'preset_1',
-    title: '🌸 Skincare - Serum Brightening Centella',
-    productName: 'Serum Brightening Centella X',
-    category: 'Skincare & Beauty',
-    description: 'Serum pencerah bekas jerawat membandel dengan 3% Niacinamide + Centella Asiatica. Hasil pudar dalam 12 hari tanpa bikin kulit iritasi atau perih.',
-    goal: 'Edukasi & Soft Selling (Membangun Kepercayaan)',
+    id: 'PK001',
+    title: '💰 Affiliate Blueprint (Product Knowledge PK001)',
+    productName: 'Affiliate Blueprint',
+    category: 'Affiliate Marketing',
+    description: 'Panduan membangun penghasilan dari affiliate marketing. Solusi komisi pertama, strategi memilih produk, & konten pemicu klik.',
+    goal: 'Lead Generation / Affiliate Cuan',
     platform: 'both',
-    targetAudiences: ['Gen Z Overthinker', 'Ibu Muda Smart Buyer', 'Pejuang Cuan / Affiliate Hunter'],
-    toneContents: ['Curhat Raw & Relate (Gen Z)', 'Temen Curhat Jujur & Mama Hack (Ibu Muda)', 'Blunt Review & Bandingin Harga (Affiliate)'],
-    productUrl: 'https://shopee.co.id/serum-brightening-x',
-    price: 'Rp 89.000 (Harga Promo)',
-    duration: '12 hari'
+    targetAudiences: ['Content Creator Pemula', 'Freelancer'],
+    toneContents: ['Friendly & Ngobrol (Santai)', 'Edukatif & Step-by-Step'],
+    productUrl: 'https://lynk.id/affiliate-blueprint',
+    price: 'Rp 99.000'
   },
   {
-    id: 'preset_2',
-    title: '⚡ AI & Tech - Notionary Auto Note AI',
-    productName: 'Notionary AI Note App',
-    category: 'AI & Tech Software / SaaS',
-    description: 'Aplikasi pencatatan otomatis berbasis AI untuk merangkum meeting, menyusun ide konten, dan auto-tagging catatan tanpa harus dirapikan manual.',
-    goal: 'Brand Awareness & Virality (Reach Maksimal)',
-    platform: 'x',
-    targetAudiences: ['Tech & Startup Enthusiast / Founders', 'Professional & Career Seekers'],
-    toneContents: ['Santai + Slightly Assertive (Edukasi & Insight)', 'Soft Sell + Value First (Marketing / Selling)'],
-    productUrl: 'https://notionary.ai/get-started',
-    price: 'Gratis Tier + Rp 99k/bln'
-  },
-  {
-    id: 'preset_3',
-    title: '☕ F&B - Kopi Susu Aren Literan Craft',
-    productName: 'Kopi Susu Aren Literan "Kopi Senja"',
-    category: 'F&B / Kuliner Local Brand',
-    description: 'Kopi susu gula aren asli 1 Liter memakai 100% biji kopi Robusta-Arabika lokal house blend. Tahan 5 hari di kulkas tanpa mengurangi rasa gurih manisnya.',
+    id: 'PK002',
+    title: '🏬 UMKM Content System (Product Knowledge PK002)',
+    productName: 'UMKM Content System',
+    category: 'Pebisnis UMKM & Local Brand',
+    description: 'Template konten untuk meningkatkan penjualan UMKM. Kalender konten, ide caption, & framework promosi closing.',
     goal: 'Direct Sales & Promo Hard Sell (Konversi Link)',
     platform: 'threads',
-    targetAudiences: ['Gen Z Overthinker', 'Cowok Praktis'],
-    toneContents: ['Curhat Raw & Relate (Gen Z)', 'To The Point & Logic (Cowok)'],
-    productUrl: 'https://tokopedia.link/kopi-literan-senja',
-    price: 'Rp 65.000 / Liter'
+    targetAudiences: ['Pebisnis UMKM'],
+    toneContents: ['Edukatif & Step-by-Step', 'Storytelling & Pengalaman'],
+    productUrl: 'https://lynk.id/umkm-contentsystem',
+    price: 'Rp 149.000'
   },
   {
-    id: 'preset_4',
-    title: '👗 Fashion - Oversized Hoodie Minimalis',
-    productName: 'Dailyoversize Heavyweight Hoodie 330gsm',
-    category: 'Fashion & Apparel',
-    description: 'Hoodie bahan cotton fleece 330gsm tebal, adem di kulit, tidak gampang berbulu meski dicuci berulang kali. Potongan drop shoulder kekinian.',
-    goal: 'Engagement & Pancing Komen (Diskusi / Algoritma Boost)',
+    id: 'PK003',
+    title: '🧵 Threads Content Pillar (Product Knowledge PK003)',
+    productName: 'Threads Content Pillar',
+    category: 'Content Creator & Media Specialist',
+    description: 'Database content pillar untuk membuat Threads tanpa kehabisan ide. 100 Content Pillar, 500 Hook, CTA & Prompt AI.',
+    goal: 'Edukasi & Soft Selling (Membangun Kepercayaan)',
+    platform: 'threads',
+    targetAudiences: ['Content Creator Pemula', 'Freelancer'],
+    toneContents: ['Friendly & Ngobrol (Santai)', 'Edukatif & Step-by-Step'],
+    productUrl: 'https://lynk.id/threads-contentpillar',
+    price: 'Rp 99.000'
+  },
+  {
+    id: 'PK004',
+    title: '🤖 Prompt Library (Product Knowledge PK004)',
+    productName: 'Prompt Library',
+    category: 'AI & Tech Software / SaaS',
+    description: 'Kumpulan 1000+ prompt AI untuk bisnis dan produktivitas. Hasil AI instan berkualitas tinggi.',
+    goal: 'Brand Awareness & Virality (Reach Maksimal)',
     platform: 'both',
-    targetAudiences: ['Gen Z Overthinker', 'Cowok Praktis', 'Deal & Promo Hunters'],
-    toneContents: ['Curhat Raw & Relate (Gen Z)', 'To The Point & Logic (Cowok)', 'Authentic & Self-Aware (Personal Branding)'],
-    productUrl: 'https://shopee.co.id/hoodie-heavyweight-330gsm',
+    targetAudiences: ['Tech & Startup Enthusiast / Founders', 'Content Creator Pemula'],
+    toneContents: ['Edukatif & Frameworks (Solusi)', 'Friendly & Ngobrol (Santai)'],
+    productUrl: 'https://lynk.id/prompt-library',
+    price: 'Rp 79.000'
+  },
+  {
+    id: 'PK005',
+    title: '🌟 Personal Branding Blueprint (Product Knowledge PK005)',
+    productName: 'Personal Branding Blueprint',
+    category: 'Jasa & Freelance / Agency',
+    description: 'Panduan membangun personal branding di media sosial untuk raih inbound leads dan dipercaya audiens.',
+    goal: 'Edukasi & Soft Selling (Membangun Kepercayaan)',
+    platform: 'both',
+    targetAudiences: ['Freelancer', 'Content Creator Pemula'],
+    toneContents: ['Otoritatif & Pengalaman Nyata', 'Storytelling & Pengalaman'],
+    productUrl: 'https://lynk.id/personalbranding-bp',
+    price: 'Rp 129.000'
+  },
+  {
+    id: 'PK006',
+    title: '📈 Invest Smart (Product Knowledge PK006)',
+    productName: 'Invest Smart',
+    category: 'Keuangan & Edukasi Finansial',
+    description: 'Panduan investasi untuk pemula. Pahami dasar investasi, kelola risiko, dan bangun aset tanpa takut rugi.',
+    goal: 'Edukasi & Soft Selling (Membangun Kepercayaan)',
+    platform: 'both',
+    targetAudiences: ['Gen Z Overthinker', 'Cowok Praktis'],
+    toneContents: ['Edukatif & Step-by-Step', 'Friendly & Ngobrol (Santai)'],
+    productUrl: 'https://lynk.id/invest-smart',
+    price: 'Rp 149.000'
+  },
+  {
+    id: 'PK007',
+    title: '🎓 Skill Mastery (Product Knowledge PK007)',
+    productName: 'Skill Mastery',
+    category: 'Edukasi & Kursus Online',
+    description: 'Kelas online profesional untuk meningkatkan skill & karier dengan mentoring, sertifikat, dan studi kasus.',
+    goal: 'Edukasi & Soft Selling (Membangun Kepercayaan)',
+    platform: 'both',
+    targetAudiences: ['Freelancer', 'Content Creator Pemula'],
+    toneContents: ['Inspiratif & Motivasi', 'Edukatif & Step-by-Step'],
+    productUrl: 'https://lynk.id/skill-mastery',
+    price: 'Rp 199.000'
+  },
+  {
+    id: 'PK008',
+    title: '🛍️ Shopee Affiliate System (Product Knowledge PK008)',
+    productName: 'Produk Affiliate Shopee',
+    category: 'Shopee Affiliate',
+    description: 'Konten membantu audiens menemukan produk yang bermanfaat melalui rekomendasi & link affiliate Shopee.',
+    goal: 'Lead Generation / Affiliate Cuan',
+    platform: 'threads',
+    targetAudiences: ['Ibu Muda Smart Buyer', 'Pejuang Cuan / Affiliate Hunter'],
+    toneContents: ['Friendly & Ngobrol (Santai)', 'Storytelling & Pengalaman'],
+    productUrl: 'https://shopee.co.id/affiliate-link',
+    price: 'Promo / Diskon'
+  },
+  {
+    id: 'preset_creator',
+    title: '🚀 Content Creator - Formula Konsisten & Anti Kehabisan Ide',
+    productName: 'Ebook Content Pillar Masterclass',
+    category: 'Content Creator & Media Specialist',
+    description: 'Panduan menyusun 30 hari content pilar lengkap dengan 20 hook viral, formula angle problem-solution, dan sistem ide otomatis.',
+    goal: 'Edukasi & Soft Selling (Membangun Kepercayaan)',
+    platform: 'both',
+    targetAudiences: ['Content Creator Pemula', 'Freelancer'],
+    toneContents: ['Friendly & Ngobrol (Santai)', 'Edukatif & Step-by-Step'],
+    productUrl: 'https://lynk.id/contentcreator-pillar',
+    price: 'Rp 99.000',
+    duration: '30 hari'
+  },
+  {
+    id: 'preset_umkm',
+    title: '🛍️ UMKM & Bisnis - Strategi Konten Penjualan Laris',
+    productName: 'Paket Konten UMKM Auto Closing',
+    category: 'Pebisnis UMKM & Local Brand',
+    description: 'Sistem pembuatan konten organik untuk meningkatkan leads dan penjualan produk tanpa harus bayar iklan mahal.',
+    goal: 'Direct Sales & Promo Hard Sell (Konversi Link)',
+    platform: 'threads',
+    targetAudiences: ['Pebisnis UMKM', 'Content Creator Pemula'],
+    toneContents: ['Edukatif & Step-by-Step', 'Storytelling & Pengalaman'],
+    productUrl: 'https://lynk.id/umkm-autoclosing',
     price: 'Rp 149.000'
   }
 ];
+
