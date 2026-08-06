@@ -10,13 +10,13 @@
       "status": "active",
       "createdAt": "2026-08-03T19:27:13.378Z",
       "lastLoginAt": "2026-08-04T01:34:33.122Z",
-      "lastActiveAt": "2026-08-04T01:34:38.850Z",
+      "lastActiveAt": "2026-08-06T08:44:06.341Z",
       "currentDeviceInfo": {
         "device": "Perangkat Web",
         "browser": "Browser",
         "os": "OS"
       },
-      "currentSessionId": "st.usr_owner_001.1785807273122.b44f3b426aabf9b8bf7dce09caad0f05"
+      "currentSessionId": "st.usr_owner_001.1785877402428.fa8eecff1dd6e5c1a9809994a38a773c"
     }
   ],
   "sessions": [
@@ -25,6 +25,17 @@
       "userId": "usr_owner_001",
       "createdAt": "2026-08-04T01:34:33.122Z",
       "lastActiveAt": "2026-08-04T01:34:38.850Z",
+      "deviceInfo": {
+        "device": "Perangkat Web",
+        "browser": "Browser",
+        "os": "OS"
+      }
+    },
+    {
+      "token": "st.usr_owner_001.1785877402428.fa8eecff1dd6e5c1a9809994a38a773c",
+      "userId": "usr_owner_001",
+      "createdAt": "2026-08-06T07:06:12.098Z",
+      "lastActiveAt": "2026-08-06T08:44:06.341Z",
       "deviceInfo": {
         "device": "Perangkat Web",
         "browser": "Browser",
@@ -57,5 +68,8 @@
       "status": "active",
       "usedByUsers": []
     }
-  ]
+  ],
+  "ownerPin": "ownerkonten123",
+  "activeAccessKey": "AFFILIATE2026",
+  "accessKeyStatus": "active"
 }

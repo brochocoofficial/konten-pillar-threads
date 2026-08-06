@@ -945,6 +945,834 @@ function extractToken(req: Request): string | null {
   // CORE APP API ROUTE (PROTECTED BY AUTH)
   // ==========================================
 
+  // Helper function to fetch Shopee public item detail API
+  async function fetchShopeeItemApi(shopid: string, itemid: string) {
+    if (!shopid || !itemid) return null;
+    const endpoints = [
+      `https://shopee.co.id/api/v4/item/get?itemid=${itemid}&shopid=${shopid}`,
+      `https://shopee.co.id/api/v2/item/get?itemid=${itemid}&shopid=${shopid}`,
+      `https://shopee.co.id/api/v4/pdp/get_pc?itemid=${itemid}&shopid=${shopid}`
+    ];
+
+    for (const endpoint of endpoints) {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3500);
+        const res = await fetch(endpoint, {
+          signal: controller.signal,
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
+            'Accept': 'application/json, text/plain, */*',
+            'Referer': `https://shopee.co.id/product/${shopid}/${itemid}`,
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept-Language': 'id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7'
+          }
+        });
+        clearTimeout(timeoutId);
+        if (res.ok) {
+          const json = await res.json();
+          const item = json?.data?.item || json?.data || json?.item;
+          if (item && (item.name || item.title)) {
+            const rawPrice = item.price || item.price_min || item.price_max;
+            let formattedPrice = '';
+            if (rawPrice) {
+              const num = Number(rawPrice);
+              const realPrice = num > 10000000 ? Math.round(num / 100000) : num;
+              formattedPrice = `Rp ${realPrice.toLocaleString('id-ID')}`;
+            }
+            return {
+              name: item.name || item.title || '',
+              description: item.description || item.desc || '',
+              price: formattedPrice,
+              brand: item.brand || item.brand_name || '',
+              rating: item.item_rating?.rating_star ? `${Number(item.item_rating.rating_star).toFixed(1)}/5` : '',
+              sold: item.historical_sold || item.sold ? `${item.historical_sold || item.sold} terjual` : '',
+              shopName: item.shop_name || '',
+              shopLocation: item.shop_location || ''
+            };
+          }
+        }
+      } catch (e) {
+        console.log(`Shopee API error for ${endpoint}:`, e);
+      }
+    }
+    return null;
+  }
+
+  // Helper function to resolve Short URLs, query redirects (redir/url/target), and HTTP/JS Redirects to get the true Canonical URL
+  async function resolveCanonicalUrl(startUrl: string, maxHops = 8): Promise<{ canonicalUrl: string; redirectHistory: string[]; finalHtml: string; status: number; extractedUrlTitle?: string; shopeeShopId?: string; shopeeItemId?: string }> {
+    let currentUrl = startUrl;
+    const history: string[] = [currentUrl];
+    let finalHtml = '';
+    let lastStatus = 200;
+    let extractedUrlTitle = '';
+    let shopeeShopId = '';
+    let shopeeItemId = '';
+
+    // Helper to check if a query string or parameter contains an embedded encoded target URL
+    const extractEmbeddedUrl = (urlStr: string): string | null => {
+      try {
+        const parsed = new URL(urlStr);
+        const redirectParams = ['redir', 'redirect', 'url', 'target', 'dest', 'destination', 'link', 'deep_link', 'target_url', 'sub_url', 'next', 'r', 'out', 'u', 'p'];
+        
+        for (const param of redirectParams) {
+          const val = parsed.searchParams.get(param);
+          if (val) {
+            let decoded = val;
+            try { decoded = decodeURIComponent(val); } catch (e) {}
+            if (/^https?:\/\//i.test(decoded) && decoded !== urlStr) {
+              return decoded;
+            }
+          }
+        }
+
+        // Search raw query string for http(s)%3A%2F%2F pattern
+        const rawQuery = parsed.search;
+        const encodedMatch = rawQuery.match(/(?:https?%3A%2F%2F|https?:\/\/)[^\s&"']+/i);
+        if (encodedMatch) {
+          try {
+            const decoded = decodeURIComponent(encodedMatch[0]);
+            if (/^https?:\/\//i.test(decoded) && decoded !== urlStr) {
+              return decoded;
+            }
+          } catch (e) {}
+        }
+      } catch (e) {}
+      return null;
+    };
+
+    const isFullProductUrl = (u: string) => {
+      return /\/product\/\d+\/\d+|-i\.\d+\.\d+|\/i\.\d+\.\d+|tokopedia\.com\/[^/]+\/[^/]+|tiktok\.com\/@/i.test(u);
+    };
+
+    for (let hop = 0; hop < maxHops; hop++) {
+      // 1. First check if currentUrl itself has an embedded URL in query params (e.g. shopee.co.id/universal-link?redir=https%3A%2F%2Fshopee.co.id%2F...)
+      const embeddedUrl = extractEmbeddedUrl(currentUrl);
+      if (embeddedUrl && !history.includes(embeddedUrl)) {
+        console.log(`[Canonical Resolver] Hop ${hop}: Found embedded URL in query param => ${embeddedUrl}`);
+        currentUrl = embeddedUrl;
+        history.push(currentUrl);
+        if (isFullProductUrl(currentUrl)) {
+          // If we reached a full canonical product URL, continue to fetch that exact page
+        }
+        continue;
+      }
+
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 8000);
+
+        const res = await fetch(currentUrl, {
+          method: 'GET',
+          redirect: 'manual', // Catch 301, 302, 303, 307, 308 manually
+          signal: controller.signal,
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language': 'id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7'
+          }
+        });
+        clearTimeout(timeoutId);
+
+        lastStatus = res.status;
+
+        // Check for HTTP Redirect Headers (301, 302, 303, 307, 308)
+        if ([301, 302, 303, 307, 308].includes(res.status)) {
+          const locationHeader = res.headers.get('location');
+          if (locationHeader) {
+            let nextUrl = new URL(locationHeader, currentUrl).href;
+            
+            // Check if location header contains an embedded redirect URL
+            const innerEmbedded = extractEmbeddedUrl(nextUrl);
+            if (innerEmbedded) {
+              nextUrl = innerEmbedded;
+            }
+
+            if (nextUrl !== currentUrl && !history.includes(nextUrl)) {
+              console.log(`[Canonical Resolver] Hop ${hop}: HTTP ${res.status} redirect => ${nextUrl}`);
+              currentUrl = nextUrl;
+              history.push(currentUrl);
+              continue;
+            }
+          }
+        }
+
+        // If 200 OK, read text and inspect for client-side JS / Meta Refresh redirects or Canonical Tag
+        if (res.ok || res.status === 200) {
+          const html = await res.text();
+          finalHtml = html;
+
+          // If current URL is already a full product URL, do NOT search for redirects inside HTML body!
+          if (isFullProductUrl(currentUrl)) {
+            break;
+          }
+
+          // 1. Check HTML <link rel="canonical" href="...">
+          const canonicalMatch = html.match(/<link[^>]*rel=["']canonical["'][^>]*href=["']([^"']+)["']/i);
+          if (canonicalMatch && canonicalMatch[1]) {
+            try {
+              const canonicalHref = new URL(canonicalMatch[1], currentUrl).href;
+              if (canonicalHref !== currentUrl && /^https?:\/\//i.test(canonicalHref) && !history.includes(canonicalHref)) {
+                currentUrl = canonicalHref;
+                history.push(currentUrl);
+                continue;
+              }
+            } catch (e) {
+              console.log('Error parsing canonical tag:', e);
+            }
+          }
+
+          // 2. Check HTML Meta Refresh redirect (<meta http-equiv="refresh" content="0;url=...">)
+          const metaRefreshMatch = html.match(/<meta[^>]*http-equiv=["']refresh["'][^>]*content=["']\d+;\s*url=([^"'\s>]+)["']/i);
+          if (metaRefreshMatch && metaRefreshMatch[1]) {
+            try {
+              let refreshUrl = new URL(metaRefreshMatch[1].replace(/['"]/g, ''), currentUrl).href;
+              const innerEmb = extractEmbeddedUrl(refreshUrl);
+              if (innerEmb) refreshUrl = innerEmb;
+
+              if (refreshUrl !== currentUrl && !history.includes(refreshUrl)) {
+                currentUrl = refreshUrl;
+                history.push(currentUrl);
+                continue;
+              }
+            } catch (e) {
+              console.log('Error parsing meta refresh:', e);
+            }
+          }
+
+          // 3. Check JavaScript redirects in short-link landing pages (e.g. location.href = "...", window.location = "...")
+          const jsRedirectMatch = html.match(/(?:window\.)?location(?:\.href|\.replace)?\s*=\s*["'](https?:\/\/[^"']+)["']/i);
+          if (jsRedirectMatch && jsRedirectMatch[1]) {
+            let jsUrl = jsRedirectMatch[1];
+            const innerEmb = extractEmbeddedUrl(jsUrl);
+            if (innerEmb) jsUrl = innerEmb;
+
+            if (jsUrl !== currentUrl && !history.includes(jsUrl)) {
+              currentUrl = jsUrl;
+              history.push(currentUrl);
+              continue;
+            }
+          }
+
+          // Arrived at final destination page
+          break;
+        } else {
+          // Non-200 status code
+          break;
+        }
+      } catch (err) {
+        console.log(`Hop ${hop} fetch error for ${currentUrl}:`, err);
+        break;
+      }
+    }
+
+    // Extract Shopee Shop ID and Item ID if present across history
+    try {
+      for (const u of history) {
+        const shopeeProductMatch = 
+          u.match(/\/product\/(\d+)\/(\d+)/i) ||
+          u.match(/\/([a-zA-Z0-9._-]+)\/(\d+)\/(\d+)/i) ||
+          u.match(/-i\.(\d+)\.(\d+)/i) ||
+          u.match(/\/i\.(\d+)\.(\d+)/i) ||
+          u.match(/shopid=(\d+).*itemid=(\d+)/i) ||
+          u.match(/itemid=(\d+).*shopid=(\d+)/i);
+
+        if (shopeeProductMatch) {
+          if (shopeeProductMatch[1] && shopeeProductMatch[2] && /^\d+$/.test(shopeeProductMatch[1]) && /^\d+$/.test(shopeeProductMatch[2])) {
+            shopeeShopId = shopeeProductMatch[1];
+            shopeeItemId = shopeeProductMatch[2];
+            break;
+          } else if (shopeeProductMatch[2] && shopeeProductMatch[3] && /^\d+$/.test(shopeeProductMatch[2]) && /^\d+$/.test(shopeeProductMatch[3])) {
+            shopeeShopId = shopeeProductMatch[2];
+            shopeeItemId = shopeeProductMatch[3];
+            break;
+          }
+        }
+      }
+    } catch (e) {}
+
+    // Extract Slug Title from Shopee or Tokopedia or general URL
+    try {
+      // 1. Shopee slug pattern: /Slug-Name-i.shopid.itemid
+      const shopeeSlugMatch = currentUrl.match(/shopee\.co\.id\/([^/]+)-i\.\d+\.\d+/i);
+      if (shopeeSlugMatch && shopeeSlugMatch[1]) {
+        let raw = decodeURIComponent(shopeeSlugMatch[1]).replace(/[-_]/g, ' ').trim();
+        if (raw.length >= 4 && !/^\d+$/.test(raw)) {
+          extractedUrlTitle = raw;
+        }
+      }
+
+      // 2. Tokopedia slug pattern: /shopname/product-name-slug
+      if (!extractedUrlTitle) {
+        const tokoSlugMatch = currentUrl.match(/tokopedia\.com\/[^/]+\/([^/?#]+)/i);
+        if (tokoSlugMatch && tokoSlugMatch[1]) {
+          let raw = decodeURIComponent(tokoSlugMatch[1]).replace(/[-_]/g, ' ').trim();
+          if (raw.length >= 4 && !/^\d+$/.test(raw)) {
+            extractedUrlTitle = raw;
+          }
+        }
+      }
+
+      // 3. Fallback path segment extractor
+      if (!extractedUrlTitle) {
+        const finalParsed = new URL(currentUrl);
+        const segments = finalParsed.pathname.split('/').filter(Boolean);
+        for (const seg of segments) {
+          let cleaned = decodeURIComponent(seg)
+            .replace(/\.(html?|php|aspx?)$/i, '')
+            .replace(/-i\.\d+\.\d+$/i, '')
+            .replace(/i\d+$/i, '')
+            .replace(/[-_]/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+          
+          if (cleaned.length >= 5 && !/^\d+$/.test(cleaned) && !/^(p|product|products|item|items|view|shop|store|universal link|pdp)$/i.test(cleaned)) {
+            extractedUrlTitle = cleaned;
+          }
+        }
+      }
+    } catch (e) {}
+
+    return {
+      canonicalUrl: currentUrl,
+      redirectHistory: history,
+      finalHtml,
+      status: lastStatus,
+      extractedUrlTitle,
+      shopeeShopId,
+      shopeeItemId
+    };
+  }
+
+  // API Route: Analyze Product Link (Shopee, Tokopedia, TikTok, Lynk.id, Website, etc.)
+  app.post('/api/analyze-link', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      let { url } = req.body;
+      if (!url || typeof url !== 'string' || !url.trim()) {
+        res.status(400).json({ error: 'URL link produk wajib diisi.' });
+        return;
+      }
+
+      url = url.trim();
+      if (!/^https?:\/\//i.test(url)) {
+        url = 'https://' + url;
+      }
+
+      // STEP 1 - 3: Follow Short URL redirects & obtain the Canonical URL
+      const { canonicalUrl, redirectHistory, finalHtml, status, extractedUrlTitle, shopeeShopId, shopeeItemId } = await resolveCanonicalUrl(url);
+
+      console.log(`[Link Analysis] Original: ${url} => Canonical: ${canonicalUrl} (ShopID: ${shopeeShopId || 'N/A'}, ItemID: ${shopeeItemId || 'N/A'}, Title Slug: "${extractedUrlTitle || ''}")`);
+
+      // STEP 3.5: Fetch Shopee Public Item API if ShopID and ItemID are present
+      let shopeeApiData: any = null;
+      if (shopeeShopId && shopeeItemId) {
+        shopeeApiData = await fetchShopeeItemApi(shopeeShopId, shopeeItemId);
+        if (shopeeApiData) {
+          console.log(`[Link Analysis] Successfully fetched Shopee API data: "${shopeeApiData.name}"`);
+        }
+      }
+
+      let cleanShopeeUrl = '';
+      if (shopeeShopId && shopeeItemId) {
+        cleanShopeeUrl = `https://shopee.co.id/product/${shopeeShopId}/${shopeeItemId}`;
+      }
+
+      let socialTitle = '';
+      let socialOgTitle = '';
+      let socialMetaDesc = '';
+
+      // STEP 3.6: Fetch target URL with Social Crawler User-Agent to extract SSR metadata
+      const targetSocialUrl = cleanShopeeUrl || canonicalUrl;
+      try {
+        const socialRes = await fetch(targetSocialUrl, {
+          headers: {
+            'User-Agent': 'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)',
+            'Accept-Language': 'id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+          }
+        });
+
+        if (socialRes.ok) {
+          const socialHtml = await socialRes.text();
+          const titleMatch = socialHtml.match(/<title[^>]*>([^<]+)<\/title>/i);
+          if (titleMatch) socialTitle = titleMatch[1].trim();
+
+          const ogMatch = socialHtml.match(/<meta[^>]*property=["']og:title["'][^>]*content=["']([^"']+)["']/i) ||
+                          socialHtml.match(/<meta[^>]*content=["']([^"']+)["'][^>]*property=["']og:title["']/i);
+          if (ogMatch) socialOgTitle = ogMatch[1].trim();
+
+          const descMatch = socialHtml.match(/<meta[^>]*property=["']og:description["'][^>]*content=["']([^"']+)["']/i) ||
+                            socialHtml.match(/<meta[^>]*content=["']([^"']+)["'][^>]*property=["']og:description["']/i) ||
+                            socialHtml.match(/<meta[^>]*name=["']description["'][^>]*content=["']([^"']+)["']/i);
+          if (descMatch) socialMetaDesc = descMatch[1].trim();
+        }
+      } catch (socialErr) {
+        console.log('[Link Analysis] Error fetching with social crawler UA:', socialErr);
+      }
+
+      let hostName = '';
+      let extractedStoreName = '';
+      let urlKeywords: string[] = [];
+
+      try {
+        const canonicalObj = new URL(cleanShopeeUrl || canonicalUrl);
+        hostName = canonicalObj.hostname.replace(/^www\./i, '');
+      } catch (e) {
+        hostName = url;
+      }
+
+      let fetchedTitle = '';
+      let fetchedOgTitle = '';
+      let fetchedMetaDesc = '';
+      let fetchedJsonLd = '';
+      let fetchedBodyText = '';
+      let jsonLdParsed: any = null;
+
+      // STEP 4: Extract Metadata & Structured Data from Canonical Page HTML
+      if (finalHtml && finalHtml.length > 50) {
+        // 1. Extract <title>
+        const titleMatch = finalHtml.match(/<title[^>]*>([^<]+)<\/title>/i);
+        if (titleMatch) fetchedTitle = titleMatch[1].trim();
+
+        // 2. Extract OpenGraph & Twitter Meta Tags
+        const ogTitleMatch = finalHtml.match(/<meta[^>]*property=["']og:title["'][^>]*content=["']([^"']+)["']/i) ||
+          finalHtml.match(/<meta[^>]*content=["']([^"']+)["'][^>]*property=["']og:title["']/i);
+        if (ogTitleMatch) fetchedOgTitle = ogTitleMatch[1].trim();
+
+        const metaDescMatch = finalHtml.match(/<meta[^>]*name=["']description["'][^>]*content=["']([^"']+)["']/i) ||
+          finalHtml.match(/<meta[^>]*property=["']og:description["'][^>]*content=["']([^"']+)["']/i);
+        if (metaDescMatch) fetchedMetaDesc = metaDescMatch[1].trim();
+
+        // 3. Extract JSON-LD / Schema.org structured data
+        const jsonLdRegex = /<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
+        let match;
+        while ((match = jsonLdRegex.exec(finalHtml)) !== null) {
+          try {
+            const parsed = JSON.parse(match[1]);
+            if (parsed) {
+              fetchedJsonLd += JSON.stringify(parsed) + ' ';
+              if (parsed['@type'] === 'Product' || parsed['@type'] === 'ItemPage') {
+                jsonLdParsed = parsed;
+              }
+            }
+          } catch (e) {
+            // ignore JSON parse error
+          }
+        }
+        if (fetchedJsonLd) {
+          fetchedJsonLd = fetchedJsonLd.replace(/\s+/g, ' ').trim().slice(0, 2000);
+        }
+
+        // 4. Clean Body Content
+        const bodyTextRaw = finalHtml
+          .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+          .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+          .replace(/<[^>]+>/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim();
+
+        if (!/javascript is (disabled|required)|access denied|security check|captcha|just a moment|cloudflare/i.test(bodyTextRaw)) {
+          fetchedBodyText = bodyTextRaw.slice(0, 3500);
+        }
+      }
+
+      // Filter generic platform titles
+      const isGenericPlatformTitle = (t: string) => 
+        !t || /shopee indonesia|situs belanja online|tokopedia|jual beli online|lazada|blibli|tiktok shop|instagram|facebook|log in|sign up|captcha|security check|access denied|403 forbidden|404 not found/i.test(t);
+
+      if (isGenericPlatformTitle(fetchedTitle)) fetchedTitle = '';
+      if (isGenericPlatformTitle(fetchedOgTitle)) fetchedOgTitle = '';
+      if (isGenericPlatformTitle(fetchedMetaDesc)) fetchedMetaDesc = '';
+      if (isGenericPlatformTitle(socialTitle)) socialTitle = '';
+      if (isGenericPlatformTitle(socialOgTitle)) socialOgTitle = '';
+
+      // Clean raw title to extract true product name & brand
+      let rawTitleToClean = socialOgTitle || socialTitle || fetchedOgTitle || fetchedTitle || '';
+      let cleanProductName = rawTitleToClean
+        .replace(/^Jual\s+/i, '')
+        .replace(/\s*\|\s*Shopee\s+Indonesia.*$/i, '')
+        .replace(/\s*\|\s*Shopee.*$/i, '')
+        .replace(/\s*\|\s*Tokopedia.*$/i, '')
+        .replace(/\s*\|\s*TikTok.*$/i, '')
+        .trim();
+
+      let cleanBrand = '';
+      if (cleanProductName && cleanProductName.includes(' - ')) {
+        const parts = cleanProductName.split(' - ');
+        if (parts[0].length <= 35 && !/jual|beli|promo/i.test(parts[0])) {
+          cleanBrand = parts[0].trim();
+        }
+      }
+
+      const finalDescription = socialMetaDesc || fetchedMetaDesc || (shopeeApiData?.description) || '';
+
+      // Extract URL Path Keywords & Query Params from Canonical URL
+      try {
+        const parsedCanonical = new URL(cleanShopeeUrl || canonicalUrl);
+        const rawSegments = parsedCanonical.pathname.split('/').filter(Boolean);
+        
+        for (let i = 0; i < rawSegments.length; i++) {
+          let seg = rawSegments[i];
+          try { seg = decodeURIComponent(seg); } catch (e) {}
+
+          seg = seg
+            .replace(/\.(html?|php|aspx?)$/i, '')
+            .replace(/-i\.\d+\.\d+$/i, '')
+            .replace(/i\d+$/i, '')
+            .replace(/-ps--[a-zA-Z0-9-]+$/i, '')
+            .replace(/\d{8,}/g, '')
+            .replace(/[-_]/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+
+          if (seg.length >= 3 && !/^\d+$/.test(seg) && !/^(p|product|products|item|items|view|shop|store|pd|dp|gp|buy|pdp)$/i.test(seg)) {
+            urlKeywords.push(seg);
+          }
+        }
+
+        parsedCanonical.searchParams.forEach((val, key) => {
+          if (/^(title|name|product_name|p_name|q|keyword|item_name)$/i.test(key) && val.length > 3) {
+            try {
+              urlKeywords.push(decodeURIComponent(val).replace(/[-_]/g, ' ').trim());
+            } catch (e) {
+              urlKeywords.push(val.replace(/[-_]/g, ' ').trim());
+            }
+          }
+        });
+
+        if (urlKeywords.length >= 2 && /tokopedia|lynk\.id|linktr\.ee|shopee/i.test(hostName)) {
+          extractedStoreName = urlKeywords[0];
+        }
+      } catch (urlErr) {
+        console.log('Error parsing canonical URL keywords:', urlErr);
+      }
+
+      const combinedUrlKeywordsStr = urlKeywords.join(' | ');
+
+      // CHECK IF FETCH FAILED COMPLETELY AND WE HAVE ZERO INFORMATION
+      const hasAnyInformation = 
+        cleanProductName ||
+        socialOgTitle ||
+        socialMetaDesc ||
+        shopeeApiData ||
+        fetchedOgTitle || 
+        fetchedTitle || 
+        fetchedMetaDesc || 
+        fetchedJsonLd || 
+        fetchedBodyText || 
+        extractedUrlTitle ||
+        combinedUrlKeywordsStr.length > 3;
+
+      if (!hasAnyInformation && status >= 400) {
+        res.status(422).json({
+          success: false,
+          error: 'Gagal membaca halaman produk.',
+          canonicalUrl: cleanShopeeUrl || canonicalUrl,
+          message: 'Halaman produk tidak dapat diakses atau diblokir oleh penyedia situs.'
+        });
+        return;
+      }
+
+      const apiKey = process.env.GEMINI_API_KEY;
+
+      if (!apiKey || apiKey === 'MY_GEMINI_API_KEY') {
+        const fallbackName = cleanProductName || shopeeApiData?.name || extractedUrlTitle || urlKeywords[urlKeywords.length - 1] || jsonLdParsed?.name || 'Produk Unggulan';
+        const fallbackBrand = cleanBrand || shopeeApiData?.brand || jsonLdParsed?.brand?.name || extractedStoreName || hostName || '';
+        const fallbackDesc = finalDescription || jsonLdParsed?.description || `Produk unggulan dari link ${cleanShopeeUrl || canonicalUrl}`;
+
+        res.json({
+          request: { url: url.trim() },
+          response: {
+            resolved: true,
+            canonicalUrl: cleanShopeeUrl || canonicalUrl,
+            metadata: {
+              productName: fallbackName,
+              brand: fallbackBrand,
+              category: 'E-commerce & Shopping',
+              description: fallbackDesc,
+              price: shopeeApiData?.price || (jsonLdParsed?.offers?.price ? `Rp ${jsonLdParsed.offers.price}` : ''),
+              rating: shopeeApiData?.rating || '',
+              sold: shopeeApiData?.sold || '',
+              shopName: fallbackBrand || shopeeApiData?.shopName || extractedStoreName || ''
+            },
+            analysis: {
+              targetAudiences: ['Konsumen Online', 'Pencari Promo / Diskon', 'Pengguna Media Sosial'],
+              usp: 'Pemesanan langsung & aman melalui link resmi',
+              valueProposition: 'Kemudahan akses & garansi keaslian produk',
+              painPoints: ['Mencari produk berkualitas tanpa ribet', 'Keraguan keamanan transaksi online'],
+              benefits: ['Pemesanan instan direct link', 'Informasi produk transparan'],
+              features: ['Sistem order resmi'],
+              objections: ['Keraguan garansi atau waktu pengiriman'],
+              cta: ['Klik link untuk melihat detail & order sekarang!']
+            }
+          },
+          success: true,
+          productName: fallbackName,
+          brand: fallbackBrand,
+          category: 'E-commerce & Shopping',
+          description: fallbackDesc,
+          price: shopeeApiData?.price || (jsonLdParsed?.offers?.price ? `Rp ${jsonLdParsed.offers.price}` : ''),
+          usp: 'Pemesanan langsung & aman melalui link resmi',
+          valueProposition: 'Kemudahan akses & garansi keaslian produk',
+          targetAudiences: ['Konsumen Online', 'Pencari Promo / Diskon', 'Pengguna Media Sosial'],
+          painPoints: ['Mencari produk berkualitas tanpa ribet', 'Keraguan keamanan transaksi online'],
+          benefits: ['Pemesanan instan direct link', 'Informasi produk transparan'],
+          features: ['Sistem order resmi'],
+          objections: ['Keraguan garansi atau waktu pengiriman'],
+          cta: ['Klik link untuk melihat detail & order sekarang!'],
+          toneContents: ['Friendly & Ngobrol (Santai)', 'Edukatif & Informatif'],
+          canonicalUrl: cleanShopeeUrl || canonicalUrl
+        });
+        return;
+      }
+
+      const ai = new GoogleGenAI({
+        apiKey,
+        httpOptions: {
+          headers: {
+            'User-Agent': 'aistudio-build'
+          }
+        }
+      });
+
+      const analysisPrompt = `
+DATA HASIL EKSTRAKSI DARI LINK & CANONICAL URL PRODUK:
+- Target URL Asli: ${url}
+- Canonical URL Hasil Redirect: ${cleanShopeeUrl || canonicalUrl}
+- Hops Redirect: ${redirectHistory.length} langkah
+- Domain / Platform: ${hostName}
+- Ground Truth Product Name: ${cleanProductName || shopeeApiData?.name || extractedUrlTitle || 'Tidak terdeteksi khusus'}
+- Ground Truth Brand / Toko: ${cleanBrand || shopeeApiData?.brand || extractedStoreName || 'Tidak terdeteksi khusus'}
+- Ground Truth Deskripsi: ${finalDescription || 'Tidak ada deskripsi'}
+- Shopee API Price: ${shopeeApiData?.price || 'Tidak ada'}
+- Shopee API Rating: ${shopeeApiData?.rating || 'Tidak ada'}
+- Shopee API Terjual: ${shopeeApiData?.sold || 'Tidak ada'}
+- Judul Halaman Spesifik: ${socialOgTitle || socialTitle || fetchedOgTitle || fetchedTitle || 'Tidak ada'}
+- Structured JSON Data: ${fetchedJsonLd || 'Tidak ada'}
+
+PETUNJUK ANALISIS E-COMMERCE & MARKET RESEARCHING (SHOPEE LINK ANALYZER WORKFLOW):
+1. ATURAN WAJIB NAMA PRODUK:
+   - DILARANG KERAS menghasilkan nama produk generik seperti "Shopee", "Shopee Indonesia", "Tokopedia", "TikTok Shop", "Produk dari Link", "Situs Belanja", "Access Denied", atau nama platform/marketplace lainnya.
+   - Ground Truth Product Name adalah "${cleanProductName || shopeeApiData?.name || extractedUrlTitle}". Kamu WAJIB MENGGUNAKAN NAMA TERSEBUT (atau menyempurnakannya agar bersih) sebagai productName!
+   - Contoh nama produk yang benar: "Kemeja Pria Oversize Lengan Panjang Polos", "Celana Pendek Boardshort Unisex", "Serum Brightening Vitamin C 10ml", "Ebook 50 Resep Kue Kering".
+
+2. RISET MARKET RESEARCH LENGKAP & KELUARKAN SCHEMATICS METADATA & ANALYSIS:
+   Berdasarkan produk asli tersebut, lakukan riset produk mendalam dan keluarkan JSON terstruktur berikut dalam Bahasa Indonesia:
+   - productName: Nama produk yang bersih, jelas, rapi, dan menarik pembeli.
+   - brand: Nama brand / toko / kreator pembuat produk.
+   - category: Kategori yang sangat pas (Skincare & Beauty, Fashion & Apparel, Gadget & Aksesoris, F&B / Kuliner, Produk Digital & Ebook, Jasa & Consulting, Perlengkapan Rumah, Affiliate Produk, dll).
+   - description: Deskripsi produk yang jelas, menjual, dan informatif (2-3 kalimat).
+   - price: Estimasi harga yang wajar atau angka spesifik jika ditemukan (misal: "Rp 129.000").
+   - discount: Info diskon jika ada (misal: "Diskon 20%").
+   - rating: Estimasi/info rating toko/produk (misal: "4.9/5").
+   - sold: Info estimasi produk terjual jika ada.
+   - shopName: Nama toko seller resmi.
+   - shopRating: Rating seller.
+   - location: Lokasi toko (misal: "Jakarta Selatan").
+   - variation: Array variasi ukuran/warna jika ada.
+   - material: Bahan produk jika relevan.
+   - color: Warna produk jika relevan.
+   - size: Ukuran jika relevan.
+   - usp: Unique Selling Proposition (Keunggulan utama dibanding pesaing).
+   - valueProposition: Nilai tambah utama untuk pembeli.
+   - targetAudiences: Array 2-4 target pasar spesifik (contoh: ["Pria Dewasa 20-35 Tahun", "Penggemar Fashion Minimalis"]).
+   - painPoints: Array 2-4 masalah calon konsumen yang diselesaikan oleh produk ini.
+   - benefits: Array 2-4 manfaat nyata produk.
+   - features: Array 2-4 fitur atau spesifikasi produk.
+   - objections: Array 2-3 keraguan calon pembeli.
+   - cta: Array 2-3 kalimat Call To Action menarik untuk promosi.
+   - hook: Array 2-3 kalimat pembuka/hook promosi media sosial.
+   - contentStyle: Array 2-3 format konten (contoh: ["Video Review Short / Reel", "Foto Carousel Visual"]).
+   - contentAngle: Array 2-3 angle promosi (contoh: ["Problem-Solution", "Unboxing & First Impression"]).
+   - toneContents: Array 2-3 gaya bahasa promosi yang paling cocok (pilih dari: ["Friendly & Ngobrol (Santai)", "Edukatif & Informatif", "Hard Selling & Urgent", "Soft Selling & Storytelling", "Mewah & Exclusive"]).
+`;
+
+      let rawData: any = null;
+      const candidateModels = ['gemini-3.6-flash', 'gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-1.5-flash'];
+
+      for (const modelName of candidateModels) {
+        try {
+          const response = await ai.models.generateContent({
+            model: modelName,
+            contents: analysisPrompt,
+            config: {
+              systemInstruction: 'Kamu adalah Pakar E-Commerce Market Research, Shopee Link Analyzer Specialist, dan Affiliate Marketing Copywriter. Tugasmu menganalisis link produk dan menghasilkan riset terstruktur yang SANGAT AKURAT, SPESIFIK, dan MENJUAL dalam Bahasa Indonesia. JANGAN PERNAH menyebut nama platform/marketplace sebagai nama produk.',
+              temperature: 0.2,
+              responseMimeType: 'application/json',
+              responseSchema: {
+                type: Type.OBJECT,
+                properties: {
+                  productName: { type: Type.STRING },
+                  brand: { type: Type.STRING },
+                  category: { type: Type.STRING },
+                  description: { type: Type.STRING },
+                  price: { type: Type.STRING },
+                  discount: { type: Type.STRING },
+                  rating: { type: Type.STRING },
+                  sold: { type: Type.STRING },
+                  shopName: { type: Type.STRING },
+                  shopRating: { type: Type.STRING },
+                  location: { type: Type.STRING },
+                  material: { type: Type.STRING },
+                  color: { type: Type.STRING },
+                  size: { type: Type.STRING },
+                  variation: { type: Type.ARRAY, items: { type: Type.STRING } },
+                  usp: { type: Type.STRING },
+                  valueProposition: { type: Type.STRING },
+                  targetAudiences: { type: Type.ARRAY, items: { type: Type.STRING } },
+                  painPoints: { type: Type.ARRAY, items: { type: Type.STRING } },
+                  benefits: { type: Type.ARRAY, items: { type: Type.STRING } },
+                  features: { type: Type.ARRAY, items: { type: Type.STRING } },
+                  objections: { type: Type.ARRAY, items: { type: Type.STRING } },
+                  cta: { type: Type.ARRAY, items: { type: Type.STRING } },
+                  hook: { type: Type.ARRAY, items: { type: Type.STRING } },
+                  contentStyle: { type: Type.ARRAY, items: { type: Type.STRING } },
+                  contentAngle: { type: Type.ARRAY, items: { type: Type.STRING } },
+                  toneContents: { type: Type.ARRAY, items: { type: Type.STRING } }
+                },
+                required: ['productName', 'category', 'description', 'targetAudiences', 'painPoints', 'benefits', 'features', 'cta']
+              }
+            }
+          });
+
+          const jsonText = response.text;
+          if (jsonText) {
+            rawData = JSON.parse(jsonText);
+            break;
+          }
+        } catch (modelErr: any) {
+          console.warn(`[Analyze Link] Model ${modelName} call failed or quota exceeded:`, modelErr?.message || modelErr);
+        }
+      }
+
+      if (!rawData) {
+        console.warn('[Analyze Link] All Gemini models failed or quota exceeded (429). Using extracted ground-truth algorithmic fallback.');
+        const fallbackName = cleanProductName || shopeeApiData?.name || extractedUrlTitle || urlKeywords[urlKeywords.length - 1] || jsonLdParsed?.name || 'Produk Unggulan';
+        const fallbackBrand = cleanBrand || shopeeApiData?.brand || jsonLdParsed?.brand?.name || extractedStoreName || hostName || '';
+        const fallbackDesc = finalDescription || jsonLdParsed?.description || `Produk unggulan dari link ${cleanShopeeUrl || canonicalUrl}`;
+
+        res.json({
+          request: { url: url.trim() },
+          response: {
+            resolved: true,
+            canonicalUrl: cleanShopeeUrl || canonicalUrl,
+            metadata: {
+              productName: fallbackName,
+              brand: fallbackBrand,
+              category: 'E-commerce & Shopping',
+              description: fallbackDesc,
+              price: shopeeApiData?.price || (jsonLdParsed?.offers?.price ? `Rp ${jsonLdParsed.offers.price}` : ''),
+              rating: shopeeApiData?.rating || '',
+              sold: shopeeApiData?.sold || '',
+              shopName: fallbackBrand || shopeeApiData?.shopName || extractedStoreName || ''
+            },
+            analysis: {
+              targetAudiences: ['Konsumen Online', 'Pencari Promo / Diskon', 'Pengguna Media Sosial'],
+              usp: 'Pemesanan langsung & aman melalui link resmi',
+              valueProposition: 'Kemudahan akses & garansi keaslian produk',
+              painPoints: ['Mencari produk berkualitas tanpa ribet', 'Keraguan keamanan transaksi online'],
+              benefits: ['Pemesanan instan direct link', 'Informasi produk transparan'],
+              features: ['Sistem order resmi'],
+              objections: ['Keraguan garansi atau waktu pengiriman'],
+              cta: ['Klik link untuk melihat detail & order sekarang!']
+            }
+          },
+          success: true,
+          productName: fallbackName,
+          brand: fallbackBrand,
+          category: 'E-commerce & Shopping',
+          description: fallbackDesc,
+          price: shopeeApiData?.price || (jsonLdParsed?.offers?.price ? `Rp ${jsonLdParsed.offers.price}` : ''),
+          usp: 'Pemesanan langsung & aman melalui link resmi',
+          valueProposition: 'Kemudahan akses & garansi keaslian produk',
+          targetAudiences: ['Konsumen Online', 'Pencari Promo / Diskon', 'Pengguna Media Sosial'],
+          painPoints: ['Mencari produk berkualitas tanpa ribet', 'Keraguan keamanan transaksi online'],
+          benefits: ['Pemesanan instan direct link', 'Informasi produk transparan'],
+          features: ['Sistem order resmi'],
+          objections: ['Keraguan garansi atau waktu pengiriman'],
+          cta: ['Klik link untuk melihat detail & order sekarang!'],
+          toneContents: ['Friendly & Ngobrol (Santai)', 'Edukatif & Informatif'],
+          canonicalUrl: cleanShopeeUrl || canonicalUrl
+        });
+        return;
+      }
+
+      const resolvedCanonicalUrl = cleanShopeeUrl || canonicalUrl;
+      const resolvedProductName = rawData.productName || cleanProductName || shopeeApiData?.name || extractedUrlTitle || 'Produk Analisis Link';
+      const resolvedBrand = rawData.brand || cleanBrand || shopeeApiData?.brand || jsonLdParsed?.brand?.name || extractedStoreName || hostName || '';
+
+      // Build structured response matching Shopee Link Analyzer specification
+      const responsePayload = {
+        request: {
+          url: url.trim()
+        },
+        response: {
+          resolved: true,
+          canonicalUrl: resolvedCanonicalUrl,
+          metadata: {
+            productName: resolvedProductName,
+            brand: resolvedBrand,
+            category: rawData.category || 'E-commerce',
+            price: rawData.price || (jsonLdParsed?.offers?.price ? `Rp ${jsonLdParsed.offers.price}` : ''),
+            discount: rawData.discount || '',
+            rating: rawData.rating || '',
+            sold: rawData.sold || '',
+            description: rawData.description || finalDescription || jsonLdParsed?.description || '',
+            features: rawData.features || [],
+            benefits: rawData.benefits || [],
+            specifications: rawData.features || [],
+            images: jsonLdParsed?.image ? [jsonLdParsed.image] : [],
+            video: '',
+            shopName: rawData.shopName || resolvedBrand || extractedStoreName || '',
+            shopRating: rawData.shopRating || '',
+            location: rawData.location || '',
+            variation: rawData.variation || [],
+            material: rawData.material || '',
+            color: rawData.color || '',
+            size: rawData.size || ''
+          },
+          analysis: {
+            targetAudiences: rawData.targetAudiences || [],
+            contentTone: rawData.toneContents || [],
+            contentStyle: rawData.contentStyle || ['Video Short / Reel', 'Post Carousel'],
+            contentAngle: rawData.contentAngle || ['Problem-Solution', 'Benefit-Focused'],
+            hook: rawData.hook || rawData.cta || [],
+            cta: rawData.cta || [],
+            usp: rawData.usp || '',
+            valueProposition: rawData.valueProposition || '',
+            painPoints: rawData.painPoints || [],
+            benefits: rawData.benefits || [],
+            features: rawData.features || [],
+            objections: rawData.objections || []
+          }
+        },
+        // Direct top-level fields for full backward compatibility
+        success: true,
+        productName: resolvedProductName,
+        brand: resolvedBrand,
+        category: rawData.category,
+        description: rawData.description || finalDescription,
+        price: rawData.price,
+        usp: rawData.usp,
+        valueProposition: rawData.valueProposition,
+        targetAudiences: rawData.targetAudiences,
+        painPoints: rawData.painPoints,
+        benefits: rawData.benefits,
+        features: rawData.features,
+        objections: rawData.objections,
+        cta: rawData.cta,
+        toneContents: rawData.toneContents,
+        canonicalUrl: resolvedCanonicalUrl
+      };
+
+      res.json(responsePayload);
+
+    } catch (err: any) {
+      console.error('Error analyzing product link in backend:', err);
+      res.status(500).json({ error: err?.message || 'Gagal menganalisis link produk. Pastikan URL valid dan dapat diakses.' });
+    }
+  });
+
   // API Route: Generate Content Plan
   app.post('/api/generate', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
@@ -1046,111 +1874,124 @@ Persyaratan Output (MANDATORY 30 KONTEN THREADS):
 3. Strategi Rangkuman Algoritma Threads & Timing Posting.
 `;
 
-        const response = await ai.models.generateContent({
-          model: 'gemini-3.6-flash',
-          contents: prompt,
-          config: {
-            systemInstruction,
-            temperature: 0.7,
-            responseMimeType: 'application/json',
-            responseSchema: {
-              type: Type.OBJECT,
-              properties: {
-                productName: { type: Type.STRING },
-                category: { type: Type.STRING },
-                description: { type: Type.STRING },
-                goal: { type: Type.STRING },
-                platform: { type: Type.STRING },
-                selectedAudiences: { type: Type.ARRAY, items: { type: Type.STRING } },
-                selectedTones: { type: Type.ARRAY, items: { type: Type.STRING } },
-                contentPillars: {
-                  type: Type.ARRAY,
-                  items: {
-                    type: Type.OBJECT,
-                    properties: {
-                      id: { type: Type.STRING },
-                      name: { type: Type.STRING },
-                      description: { type: Type.STRING },
-                      percentage: { type: Type.NUMBER },
-                      purpose: { type: Type.STRING },
-                      exampleAngles: { type: Type.ARRAY, items: { type: Type.STRING } }
-                    },
-                    required: ['id', 'name', 'description', 'percentage', 'purpose', 'exampleAngles']
-                  }
-                },
-                contentIdeas: {
-                  type: Type.ARRAY,
-                  items: {
-                    type: Type.OBJECT,
-                    properties: {
-                      id: { type: Type.STRING },
-                      dayNumber: { type: Type.NUMBER },
-                      dayName: { type: Type.STRING },
-                      platform: { type: Type.STRING },
-                      pillar: { type: Type.STRING },
-                      contentType: { type: Type.STRING },
-                      cycleType: { type: Type.STRING },
-                      postTime: { type: Type.STRING },
-                      targetAudience: { type: Type.STRING },
-                      tone: { type: Type.STRING },
-                      title: { type: Type.STRING },
-                      hook: { type: Type.STRING },
-                      hookScore: {
-                        type: Type.OBJECT,
-                        properties: {
-                          curiosity: { type: Type.NUMBER },
-                          relatability: { type: Type.NUMBER },
-                          specificity: { type: Type.NUMBER },
-                          total: { type: Type.NUMBER },
-                          status: { type: Type.STRING }
-                        },
-                        required: ['curiosity', 'relatability', 'specificity', 'total', 'status']
-                      },
-                      threadCount: { type: Type.NUMBER },
-                      threadReasoning: { type: Type.STRING },
-                      threadPosts: { type: Type.ARRAY, items: { type: Type.STRING } },
-                      body: { type: Type.STRING },
-                      visualSuggestion: { type: Type.STRING },
-                      linkPlacement: {
-                        type: Type.OBJECT,
-                        properties: {
-                          placement: { type: Type.STRING },
-                          condition: { type: Type.STRING },
-                          copyText: { type: Type.STRING }
-                        },
-                        required: ['placement', 'condition', 'copyText']
-                      },
-                      reachBoosterChecklist: { type: Type.ARRAY, items: { type: Type.STRING } }
-                    },
-                    required: [
-                      'id', 'dayNumber', 'dayName', 'platform', 'pillar',
-                      'contentType', 'cycleType', 'postTime', 'targetAudience',
-                      'tone', 'title', 'hook', 'hookScore', 'threadCount',
-                      'threadReasoning', 'threadPosts', 'body',
-                      'visualSuggestion', 'linkPlacement', 'reachBoosterChecklist'
-                    ]
-                  }
-                },
-                strategySummary: {
+        let jsonText: string | undefined;
+        const candidateModels = ['gemini-3.6-flash', 'gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-1.5-flash'];
+
+        for (const modelName of candidateModels) {
+          try {
+            const response = await ai.models.generateContent({
+              model: modelName,
+              contents: prompt,
+              config: {
+                systemInstruction,
+                temperature: 0.7,
+                responseMimeType: 'application/json',
+                responseSchema: {
                   type: Type.OBJECT,
                   properties: {
-                    ruleSummary: { type: Type.STRING },
-                    bestPostingTimes: { type: Type.ARRAY, items: { type: Type.STRING } },
-                    algorithmTips: { type: Type.ARRAY, items: { type: Type.STRING } }
+                    productName: { type: Type.STRING },
+                    category: { type: Type.STRING },
+                    description: { type: Type.STRING },
+                    goal: { type: Type.STRING },
+                    platform: { type: Type.STRING },
+                    selectedAudiences: { type: Type.ARRAY, items: { type: Type.STRING } },
+                    selectedTones: { type: Type.ARRAY, items: { type: Type.STRING } },
+                    contentPillars: {
+                      type: Type.ARRAY,
+                      items: {
+                        type: Type.OBJECT,
+                        properties: {
+                          id: { type: Type.STRING },
+                          name: { type: Type.STRING },
+                          description: { type: Type.STRING },
+                          percentage: { type: Type.NUMBER },
+                          purpose: { type: Type.STRING },
+                          exampleAngles: { type: Type.ARRAY, items: { type: Type.STRING } }
+                        },
+                        required: ['id', 'name', 'description', 'percentage', 'purpose', 'exampleAngles']
+                      }
+                    },
+                    contentIdeas: {
+                      type: Type.ARRAY,
+                      items: {
+                        type: Type.OBJECT,
+                        properties: {
+                          id: { type: Type.STRING },
+                          dayNumber: { type: Type.NUMBER },
+                          dayName: { type: Type.STRING },
+                          platform: { type: Type.STRING },
+                          pillar: { type: Type.STRING },
+                          contentType: { type: Type.STRING },
+                          cycleType: { type: Type.STRING },
+                          postTime: { type: Type.STRING },
+                          targetAudience: { type: Type.STRING },
+                          tone: { type: Type.STRING },
+                          title: { type: Type.STRING },
+                          hook: { type: Type.STRING },
+                          hookScore: {
+                            type: Type.OBJECT,
+                            properties: {
+                              curiosity: { type: Type.NUMBER },
+                              relatability: { type: Type.NUMBER },
+                              specificity: { type: Type.NUMBER },
+                              total: { type: Type.NUMBER },
+                              status: { type: Type.STRING }
+                            },
+                            required: ['curiosity', 'relatability', 'specificity', 'total', 'status']
+                          },
+                          threadCount: { type: Type.NUMBER },
+                          threadReasoning: { type: Type.STRING },
+                          threadPosts: { type: Type.ARRAY, items: { type: Type.STRING } },
+                          body: { type: Type.STRING },
+                          visualSuggestion: { type: Type.STRING },
+                          linkPlacement: {
+                            type: Type.OBJECT,
+                            properties: {
+                              placement: { type: Type.STRING },
+                              condition: { type: Type.STRING },
+                              copyText: { type: Type.STRING }
+                            },
+                            required: ['placement', 'condition', 'copyText']
+                          },
+                          reachBoosterChecklist: { type: Type.ARRAY, items: { type: Type.STRING } }
+                        },
+                        required: [
+                          'id', 'dayNumber', 'dayName', 'platform', 'pillar',
+                          'contentType', 'cycleType', 'postTime', 'targetAudience',
+                          'tone', 'title', 'hook', 'hookScore', 'threadCount',
+                          'threadReasoning', 'threadPosts', 'body',
+                          'visualSuggestion', 'linkPlacement', 'reachBoosterChecklist'
+                        ]
+                      }
+                    },
+                    strategySummary: {
+                      type: Type.OBJECT,
+                      properties: {
+                        ruleSummary: { type: Type.STRING },
+                        bestPostingTimes: { type: Type.ARRAY, items: { type: Type.STRING } },
+                        algorithmTips: { type: Type.ARRAY, items: { type: Type.STRING } }
+                      },
+                      required: ['ruleSummary', 'bestPostingTimes', 'algorithmTips']
+                    }
                   },
-                  required: ['ruleSummary', 'bestPostingTimes', 'algorithmTips']
+                  required: [
+                    'productName', 'category', 'description', 'goal',
+                    'platform', 'selectedAudiences', 'selectedTones',
+                    'contentPillars', 'contentIdeas', 'strategySummary'
+                  ]
                 }
-              },
-              required: [
-                'productName', 'category', 'description', 'goal',
-                'platform', 'selectedAudiences', 'selectedTones',
-                'contentPillars', 'contentIdeas', 'strategySummary'
-              ]
-            }
-          }
-        });
+              }
+            });
 
-        const jsonText = response.text;
+            if (response.text) {
+              jsonText = response.text;
+              break;
+            }
+          } catch (modelErr: any) {
+            console.warn(`[Generate Plan] Model ${modelName} call failed or quota exceeded:`, modelErr?.message || modelErr);
+          }
+        }
+
         if (jsonText) {
           const parsed: GenerationResult = JSON.parse(jsonText);
           parsed.generatedAt = new Date().toLocaleDateString('id-ID', {

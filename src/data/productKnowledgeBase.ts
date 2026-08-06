@@ -11,6 +11,11 @@ export interface ProductKnowledgeItem {
   cta: string[];
   price?: string;
   product_url?: string;
+  usp?: string;
+  value_proposition?: string;
+  tone_contents?: string[];
+  file_path?: string;
+  created_at?: string;
 }
 
 export const PRODUCT_KNOWLEDGE_BASE: ProductKnowledgeItem[] = [
