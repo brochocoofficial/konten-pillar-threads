@@ -999,6 +999,90 @@ function extractToken(req: Request): string | null {
     return null;
   }
 
+  // Helper to extract Lynk.id creator, product title, and category from URL
+  function extractLynkIdDetails(urlStr: string) {
+    try {
+      const parsed = new URL(urlStr);
+      const host = parsed.hostname.replace(/^www\./i, '');
+      if (!/lynk\.id|lynk\.is/i.test(host)) return null;
+
+      const rawSegments = parsed.pathname.split('/').filter(Boolean);
+      if (rawSegments.length === 0) return null;
+
+      let rawUser = '';
+      let rawSlug = '';
+      let pageType = 'Katalog Store / Bio Link Creator';
+      let defaultCategory = 'Produk Digital & E-Commerce';
+
+      if (rawSegments.length === 1) {
+        rawUser = rawSegments[0];
+      } else if (rawSegments[0] === 'p' || rawSegments[0] === 's' || rawSegments[0] === 'v' || rawSegments[0] === 'e') {
+        pageType = rawSegments[0] === 'p' ? 'Produk Digital / Ebook' : rawSegments[0] === 's' ? 'Kelas / Course' : 'Konten / Event';
+        rawSlug = rawSegments.slice(1).join('-');
+      } else {
+        rawUser = rawSegments[0];
+        const sub = rawSegments[1];
+        if (sub === 'p') {
+          pageType = 'Produk Digital / Ebook';
+          defaultCategory = 'Produk Digital & Ebook';
+          rawSlug = rawSegments.slice(2).join('-');
+        } else if (sub === 's') {
+          pageType = 'Kelas / Mini Course';
+          defaultCategory = 'Edukasi & Mini Course';
+          rawSlug = rawSegments.slice(2).join('-');
+        } else if (sub === 'v' || sub === 'e') {
+          pageType = 'Konten Premium / Event';
+          defaultCategory = 'Konten Digital';
+          rawSlug = rawSegments.slice(2).join('-');
+        } else if (sub === 'id') {
+          pageType = 'Produk Digital';
+          rawSlug = rawSegments.slice(2).join('-');
+        } else {
+          pageType = 'Produk Digital';
+          rawSlug = rawSegments.slice(1).join('-');
+        }
+      }
+
+      let creatorFormatted = rawUser
+        .replace(/[-_.]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+      if (creatorFormatted) {
+        creatorFormatted = creatorFormatted.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+      }
+
+      let productFormatted = rawSlug
+        .replace(/[-_]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+      if (productFormatted) {
+        if (/^[a-zA-Z0-9]{5,10}$/.test(productFormatted) && !/ebook|kelas|course|preset|template|panduan|buku|video|jasa|modul/i.test(productFormatted)) {
+          productFormatted = `Produk Digital Creator (${creatorFormatted || 'Lynk.id'})`;
+        } else {
+          productFormatted = productFormatted.split(' ').map(w => {
+            if (/^(dan|atau|yang|untuk|di|ke|dari|dengan|by)$/i.test(w)) return w.toLowerCase();
+            return w.charAt(0).toUpperCase() + w.slice(1);
+          }).join(' ');
+        }
+      } else {
+        productFormatted = `Katalog Store & Produk Digital ${creatorFormatted || 'Creator'}`;
+      }
+
+      return {
+        isLynkId: true,
+        creatorUsername: rawUser,
+        creatorFormatted,
+        productFormatted,
+        pageType,
+        defaultCategory
+      };
+    } catch (e) {
+      return null;
+    }
+  }
+
   // Helper function to resolve Short URLs, query redirects (redir/url/target), and HTTP/JS Redirects to get the true Canonical URL
   async function resolveCanonicalUrl(startUrl: string, maxHops = 8): Promise<{ canonicalUrl: string; redirectHistory: string[]; finalHtml: string; status: number; extractedUrlTitle?: string; shopeeShopId?: string; shopeeItemId?: string }> {
     let currentUrl = startUrl;
@@ -1378,7 +1462,7 @@ function extractToken(req: Request): string | null {
 
       // Filter generic platform titles
       const isGenericPlatformTitle = (t: string) => 
-        !t || /shopee indonesia|situs belanja online|tokopedia|jual beli online|lazada|blibli|tiktok shop|instagram|facebook|log in|sign up|captcha|security check|access denied|403 forbidden|404 not found/i.test(t);
+        !t || /shopee indonesia|situs belanja online|tokopedia|jual beli online|lazada|blibli|tiktok shop|instagram|facebook|log in|sign up|captcha|security check|access denied|403 forbidden|404 not found|just a moment|attention required/i.test(t);
 
       if (isGenericPlatformTitle(fetchedTitle)) fetchedTitle = '';
       if (isGenericPlatformTitle(fetchedOgTitle)) fetchedOgTitle = '';
@@ -1404,7 +1488,23 @@ function extractToken(req: Request): string | null {
         }
       }
 
-      const finalDescription = socialMetaDesc || fetchedMetaDesc || (shopeeApiData?.description) || '';
+      let finalDescription = socialMetaDesc || fetchedMetaDesc || (shopeeApiData?.description) || '';
+
+      // Check for Lynk.id domain & extract creator & product details from slug
+      const lynkInfo = extractLynkIdDetails(canonicalUrl) || extractLynkIdDetails(url);
+      if (lynkInfo) {
+        console.log(`[Link Analysis] Lynk.id detected => Creator: "${lynkInfo.creatorFormatted}", Product: "${lynkInfo.productFormatted}", Type: "${lynkInfo.pageType}"`);
+        if (!cleanProductName || isGenericPlatformTitle(cleanProductName)) {
+          cleanProductName = lynkInfo.productFormatted;
+        }
+        if (!cleanBrand) {
+          cleanBrand = lynkInfo.creatorFormatted;
+        }
+        extractedStoreName = lynkInfo.creatorFormatted;
+        if (!finalDescription) {
+          finalDescription = `${lynkInfo.pageType} oleh ${lynkInfo.creatorFormatted} di platform Lynk.id Indonesia.`;
+        }
+      }
 
       // Extract URL Path Keywords & Query Params from Canonical URL
       try {
@@ -1441,7 +1541,7 @@ function extractToken(req: Request): string | null {
         });
 
         if (urlKeywords.length >= 2 && /tokopedia|lynk\.id|linktr\.ee|shopee/i.test(hostName)) {
-          extractedStoreName = urlKeywords[0];
+          extractedStoreName = extractedStoreName || urlKeywords[0];
         }
       } catch (urlErr) {
         console.log('Error parsing canonical URL keywords:', urlErr);
@@ -1451,6 +1551,7 @@ function extractToken(req: Request): string | null {
 
       // CHECK IF FETCH FAILED COMPLETELY AND WE HAVE ZERO INFORMATION
       const hasAnyInformation = 
+        lynkInfo !== null ||
         cleanProductName ||
         socialOgTitle ||
         socialMetaDesc ||
@@ -1476,8 +1577,8 @@ function extractToken(req: Request): string | null {
       const apiKey = process.env.GEMINI_API_KEY;
 
       if (!apiKey || apiKey === 'MY_GEMINI_API_KEY') {
-        const fallbackName = cleanProductName || shopeeApiData?.name || extractedUrlTitle || urlKeywords[urlKeywords.length - 1] || jsonLdParsed?.name || 'Produk Unggulan';
-        const fallbackBrand = cleanBrand || shopeeApiData?.brand || jsonLdParsed?.brand?.name || extractedStoreName || hostName || '';
+        const fallbackName = cleanProductName || lynkInfo?.productFormatted || shopeeApiData?.name || extractedUrlTitle || urlKeywords[urlKeywords.length - 1] || jsonLdParsed?.name || 'Produk Unggulan';
+        const fallbackBrand = cleanBrand || lynkInfo?.creatorFormatted || shopeeApiData?.brand || jsonLdParsed?.brand?.name || extractedStoreName || hostName || '';
         const fallbackDesc = finalDescription || jsonLdParsed?.description || `Produk unggulan dari link ${cleanShopeeUrl || canonicalUrl}`;
 
         res.json({
@@ -1488,7 +1589,7 @@ function extractToken(req: Request): string | null {
             metadata: {
               productName: fallbackName,
               brand: fallbackBrand,
-              category: 'E-commerce & Shopping',
+              category: lynkInfo ? lynkInfo.defaultCategory : 'E-commerce & Shopping',
               description: fallbackDesc,
               price: shopeeApiData?.price || (jsonLdParsed?.offers?.price ? `Rp ${jsonLdParsed.offers.price}` : ''),
               rating: shopeeApiData?.rating || '',
@@ -1509,7 +1610,7 @@ function extractToken(req: Request): string | null {
           success: true,
           productName: fallbackName,
           brand: fallbackBrand,
-          category: 'E-commerce & Shopping',
+          category: lynkInfo ? lynkInfo.defaultCategory : 'E-commerce & Shopping',
           description: fallbackDesc,
           price: shopeeApiData?.price || (jsonLdParsed?.offers?.price ? `Rp ${jsonLdParsed.offers.price}` : ''),
           usp: 'Pemesanan langsung & aman melalui link resmi',
@@ -1540,9 +1641,9 @@ DATA HASIL EKSTRAKSI DARI LINK & CANONICAL URL PRODUK:
 - Target URL Asli: ${url}
 - Canonical URL Hasil Redirect: ${cleanShopeeUrl || canonicalUrl}
 - Hops Redirect: ${redirectHistory.length} langkah
-- Domain / Platform: ${hostName}
-- Ground Truth Product Name: ${cleanProductName || shopeeApiData?.name || extractedUrlTitle || 'Tidak terdeteksi khusus'}
-- Ground Truth Brand / Toko: ${cleanBrand || shopeeApiData?.brand || extractedStoreName || 'Tidak terdeteksi khusus'}
+- Domain / Platform: ${lynkInfo ? `Lynk.id (${lynkInfo.pageType})` : hostName}
+- Ground Truth Product Name: ${cleanProductName || lynkInfo?.productFormatted || shopeeApiData?.name || extractedUrlTitle || 'Tidak terdeteksi khusus'}
+- Ground Truth Brand / Toko: ${cleanBrand || lynkInfo?.creatorFormatted || shopeeApiData?.brand || extractedStoreName || 'Tidak terdeteksi khusus'}
 - Ground Truth Deskripsi: ${finalDescription || 'Tidak ada deskripsi'}
 - Shopee API Price: ${shopeeApiData?.price || 'Tidak ada'}
 - Shopee API Rating: ${shopeeApiData?.rating || 'Tidak ada'}
@@ -1550,17 +1651,24 @@ DATA HASIL EKSTRAKSI DARI LINK & CANONICAL URL PRODUK:
 - Judul Halaman Spesifik: ${socialOgTitle || socialTitle || fetchedOgTitle || fetchedTitle || 'Tidak ada'}
 - Structured JSON Data: ${fetchedJsonLd || 'Tidak ada'}
 
-PETUNJUK ANALISIS E-COMMERCE & MARKET RESEARCHING (SHOPEE LINK ANALYZER WORKFLOW):
+PETUNJUK ANALISIS E-COMMERCE & MARKET RESEARCHING (SHOPEE & LYNK.ID LINK ANALYZER WORKFLOW):
 1. ATURAN WAJIB NAMA PRODUK:
    - DILARANG KERAS menghasilkan nama produk generik seperti "Shopee", "Shopee Indonesia", "Tokopedia", "TikTok Shop", "Produk dari Link", "Situs Belanja", "Access Denied", atau nama platform/marketplace lainnya.
-   - Ground Truth Product Name adalah "${cleanProductName || shopeeApiData?.name || extractedUrlTitle}". Kamu WAJIB MENGGUNAKAN NAMA TERSEBUT (atau menyempurnakannya agar bersih) sebagai productName!
-   - Contoh nama produk yang benar: "Kemeja Pria Oversize Lengan Panjang Polos", "Celana Pendek Boardshort Unisex", "Serum Brightening Vitamin C 10ml", "Ebook 50 Resep Kue Kering".
+   - Ground Truth Product Name adalah "${cleanProductName || lynkInfo?.productFormatted || shopeeApiData?.name || extractedUrlTitle}". Kamu WAJIB MENGGUNAKAN NAMA TERSEBUT (atau menyempurnakannya agar bersih) sebagai productName!
+   - Contoh nama produk yang benar: "Kemeja Pria Oversize Lengan Panjang Polos", "Ebook Panduan Affiliate Shopee 2024", "Kelas Mastery TikTok Affiliate", "Preset Lightroom Aesthetic Selebgram".
 
-2. RISET MARKET RESEARCH LENGKAP & KELUARKAN SCHEMATICS METADATA & ANALYSIS:
+2. ATURAN KHUSUS ANALISIS LYNK.ID (PLATFORM BIO LINK & CREATOR DIGITAL):
+   ${lynkInfo ? `- Link ini terdeteksi dari Lynk.id milik creator "${lynkInfo.creatorFormatted}".
+   - Nama Produk / Item: "${lynkInfo.productFormatted}".
+   - Tipe Halaman: ${lynkInfo.pageType}.
+   - WAJIB gunakan "${lynkInfo.productFormatted}" sebagai productName dan "${lynkInfo.creatorFormatted}" sebagai brand/shopName.
+   - Pahami bahwa Lynk.id digunakan untuk menjual produk digital, ebook, mini course, preset, template, konsultasi, atau katalog bio link.` : '- Jika link berasal dari Lynk.id, ekstrak nama creator dari username dan nama produk dari slug URL.'}
+
+3. RISET MARKET RESEARCH LENGKAP & KELUARKAN SCHEMATICS METADATA & ANALYSIS:
    Berdasarkan produk asli tersebut, lakukan riset produk mendalam dan keluarkan JSON terstruktur berikut dalam Bahasa Indonesia:
    - productName: Nama produk yang bersih, jelas, rapi, dan menarik pembeli.
    - brand: Nama brand / toko / kreator pembuat produk.
-   - category: Kategori yang sangat pas (Skincare & Beauty, Fashion & Apparel, Gadget & Aksesoris, F&B / Kuliner, Produk Digital & Ebook, Jasa & Consulting, Perlengkapan Rumah, Affiliate Produk, dll).
+   - category: Kategori yang sangat pas (Skincare & Beauty, Fashion & Apparel, Gadget & Aksesoris, F&B / Kuliner, Produk Digital & Ebook, Edukasi & Mini Course, Jasa & Consulting, Perlengkapan Rumah, Affiliate Produk, dll).
    - description: Deskripsi produk yang jelas, menjual, dan informatif (2-3 kalimat).
    - price: Estimasi harga yang wajar atau angka spesifik jika ditemukan (misal: "Rp 129.000").
    - discount: Info diskon jika ada (misal: "Diskon 20%").

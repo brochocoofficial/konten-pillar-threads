@@ -9,33 +9,22 @@
       "role": "owner",
       "status": "active",
       "createdAt": "2026-08-03T19:27:13.378Z",
-      "lastLoginAt": "2026-08-04T01:34:33.122Z",
-      "lastActiveAt": "2026-08-06T08:44:06.341Z",
+      "lastLoginAt": "2026-08-08T10:35:22.903Z",
+      "lastActiveAt": "2026-08-08T10:35:42.466Z",
       "currentDeviceInfo": {
         "device": "Perangkat Web",
         "browser": "Browser",
         "os": "OS"
       },
-      "currentSessionId": "st.usr_owner_001.1785877402428.fa8eecff1dd6e5c1a9809994a38a773c"
+      "currentSessionId": "st.usr_owner_001.1786185322903.7bda47c7bb6688a3b2b1e34e41166717"
     }
   ],
   "sessions": [
     {
-      "token": "st.usr_owner_001.1785807273122.b44f3b426aabf9b8bf7dce09caad0f05",
+      "token": "st.usr_owner_001.1786185322903.7bda47c7bb6688a3b2b1e34e41166717",
       "userId": "usr_owner_001",
-      "createdAt": "2026-08-04T01:34:33.122Z",
-      "lastActiveAt": "2026-08-04T01:34:38.850Z",
-      "deviceInfo": {
-        "device": "Perangkat Web",
-        "browser": "Browser",
-        "os": "OS"
-      }
-    },
-    {
-      "token": "st.usr_owner_001.1785877402428.fa8eecff1dd6e5c1a9809994a38a773c",
-      "userId": "usr_owner_001",
-      "createdAt": "2026-08-06T07:06:12.098Z",
-      "lastActiveAt": "2026-08-06T08:44:06.341Z",
+      "createdAt": "2026-08-08T10:35:22.903Z",
+      "lastActiveAt": "2026-08-08T10:35:42.466Z",
       "deviceInfo": {
         "device": "Perangkat Web",
         "browser": "Browser",

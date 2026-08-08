@@ -1,6 +1,6 @@
 {
   "name": "PILLARFLOW",
-  "description": "PILLARFLOW — Content Planner, Hook Virality Generator, & Strategy berbasis Framework Algoritma & Audience Matrix.",
+  "description": "PILLARFLOW — Generator Perencana Konten AI, Analisis Link Produk E-Commerce (Shopee/Tokopedia/TikTok), Skor Hook Viralitas, dan Strategi Content Pillars.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
